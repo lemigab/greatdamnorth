@@ -1,0 +1,42 @@
+using UnityEngine;
+
+public class PlayerController : MonoBehaviour
+{
+    public float moveSpeed = 5f;
+    private InputSystem_Actions input = null;
+    public float rotationSpeed = 10f;
+    private BeaverController beaver = null;
+
+    void Awake()
+    {
+        input = new InputSystem_Actions();
+    }
+    void Start()
+    {
+        //input = new InputSystem_Actions();
+        beaver = GetComponent<BeaverController>();
+    }
+    void Update()
+    {
+        Vector2 moveInput = input.Player.Move.ReadValue<Vector2>();
+        if (moveInput.x != 0 || moveInput.y != 0) {
+            Vector3 direction = new Vector3(moveInput.x, 0, moveInput.y);
+            Vector3 targetDirection = Quaternion.Euler(0, Camera.main.transform.eulerAngles.y, 0) * direction;
+            beaver.Move(targetDirection);
+        }
+
+        if (input.Player.Chew.IsPressed()) {
+            beaver.Chew();
+        }
+    }
+
+    void OnEnable()
+    {
+        input.Player.Enable();
+    }
+
+    void OnDisable()
+    {
+        input.Player.Disable();
+    }
+}
