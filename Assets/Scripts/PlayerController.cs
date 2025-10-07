@@ -2,9 +2,7 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    public float moveSpeed = 5f;
     private InputSystem_Actions input = null;
-    public float rotationSpeed = 10f;
     private BeaverController beaver = null;
 
     void Awake()
