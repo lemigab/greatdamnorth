@@ -664,6 +664,7 @@ GameObject:
   - component: {fileID: 505330017}
   - component: {fileID: 505330019}
   - component: {fileID: 505330018}
+  - component: {fileID: 505330020}
   m_Layer: 0
   m_Name: Tree1
   m_TagString: Untagged
@@ -742,6 +743,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 505330016}
   m_Mesh: {fileID: 2494185979427425891, guid: beb772b04cd4ece4184c3903b1a7c06c, type: 3}
+--- !u!65 &505330020
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 505330016}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.02, y: 0.020000005, z: 0.020000005}
+  m_Center: {x: 0, y: -0.00000001490116, z: 0}
 --- !u!1 &732693948
 GameObject:
   m_ObjectHideFlags: 0
@@ -842,6 +864,7 @@ GameObject:
   - component: {fileID: 746282294}
   - component: {fileID: 746282296}
   - component: {fileID: 746282295}
+  - component: {fileID: 746282297}
   m_Layer: 0
   m_Name: Tree3
   m_TagString: Untagged
@@ -920,6 +943,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 746282293}
   m_Mesh: {fileID: 2494185979427425891, guid: beb772b04cd4ece4184c3903b1a7c06c, type: 3}
+--- !u!65 &746282297
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 746282293}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.02, y: 0.020000005, z: 0.020000005}
+  m_Center: {x: 0, y: -0.00000001490116, z: 0}
 --- !u!1 &792245979
 GameObject:
   m_ObjectHideFlags: 0
@@ -1475,8 +1519,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2a69642eaf82a4b308de25e70a83b97c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  moveSpeed: 5
-  rotationSpeed: 10
 --- !u!65 &1727052822
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -1717,6 +1759,7 @@ GameObject:
   - component: {fileID: 2112719602}
   - component: {fileID: 2112719604}
   - component: {fileID: 2112719603}
+  - component: {fileID: 2112719605}
   m_Layer: 0
   m_Name: Tree2
   m_TagString: Untagged
@@ -1795,6 +1838,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2112719601}
   m_Mesh: {fileID: 2494185979427425891, guid: beb772b04cd4ece4184c3903b1a7c06c, type: 3}
+--- !u!65 &2112719605
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2112719601}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.02, y: 0.020000005, z: 0.020000005}
+  m_Center: {x: 0, y: -0.00000001490116, z: 0}
 --- !u!1 &194346929584945852
 GameObject:
   m_ObjectHideFlags: 0
@@ -1857,6 +1921,7 @@ GameObject:
   - component: {fileID: 8215535256518336764}
   - component: {fileID: 7365186420286617554}
   - component: {fileID: 3379645365311787860}
+  - component: {fileID: 8215535256518336765}
   m_Layer: 0
   m_Name: Tree0
   m_TagString: Untagged
@@ -1991,6 +2056,7 @@ GameObject:
   - component: {fileID: 8473593012260818653}
   - component: {fileID: 5622669552446714018}
   - component: {fileID: 1565108122710005981}
+  - component: {fileID: 8473593012260818654}
   m_Layer: 0
   m_Name: Land
   m_TagString: Untagged
@@ -2065,6 +2131,10 @@ GameObject:
   - component: {fileID: 8971307641579235460}
   - component: {fileID: 7823320486479396222}
   - component: {fileID: 7885674056930382331}
+  - component: {fileID: 8971307641579235463}
+  - component: {fileID: 8971307641579235462}
+  - component: {fileID: 8971307641579235464}
+  - component: {fileID: 8971307641579235461}
   m_Layer: 0
   m_Name: Beaver
   m_TagString: Untagged
@@ -2246,6 +2316,27 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1886245469}
   m_LocalEulerAnglesHint: {x: -90, y: 0, z: 0}
+--- !u!65 &8215535256518336765
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 812063952360236447}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.02, y: 0.020000005, z: 0.020000005}
+  m_Center: {x: 0, y: -0.00000001490116, z: 0}
 --- !u!4 &8473593012260818653
 Transform:
   m_ObjectHideFlags: 0
@@ -2261,6 +2352,27 @@ Transform:
   m_Children: []
   m_Father: {fileID: 101301138}
   m_LocalEulerAnglesHint: {x: -90, y: 0, z: 0}
+--- !u!65 &8473593012260818654
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2987926278779069698}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.02000001, y: 0.020000005, z: 0.02000003}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!4 &8971307641579235460
 Transform:
   m_ObjectHideFlags: 0
@@ -2277,6 +2389,82 @@ Transform:
   - {fileID: 4621875364857278158}
   m_Father: {fileID: 101301138}
   m_LocalEulerAnglesHint: {x: -90, y: 0, z: 0}
+--- !u!114 &8971307641579235461
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3958416985057751853}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7bddd941840034d49901cc6698c888c2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BeaverController
+  moveSpeed: 5
+  rotationSpeed: 10
+  isNearTree: 0
+  currentTree: {fileID: 0}
+--- !u!65 &8971307641579235462
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3958416985057751853}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.02, y: 0.04500001, z: 0.020000005}
+  m_Center: {x: 0, y: 0.0025000002, z: 2.366985e-17}
+--- !u!54 &8971307641579235463
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3958416985057751853}
+  serializedVersion: 5
+  m_Mass: 1
+  m_LinearDamping: 0
+  m_AngularDamping: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
+--- !u!114 &8971307641579235464
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3958416985057751853}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 331debd91f234274d909754848fd563f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: '::'
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
