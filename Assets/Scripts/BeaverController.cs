@@ -5,7 +5,21 @@ public class BeaverController : MonoBehaviour
     public float moveSpeed = 5f;
     public float rotationSpeed = 10f;
     public bool isNearTree = false;
+    public bool isHoldingLog = false;
+    public bool isNearDam = false;
+    private GameObject currentDam = null;
     public GameObject currentTree = null;
+    private SandboxGlobal sandbox;
+
+    private bool isPlayerBeaver = false;
+    private bool isInEnemyZone = false;
+
+    void Start() {
+        sandbox = Object.FindFirstObjectByType<SandboxGlobal>();
+        if (gameObject.CompareTag("Player")) {
+            isPlayerBeaver = true;
+        }
+    }
 
     void OnTriggerEnter(Collider other) {
         Debug.Log("OnTriggerEnter: " + other.gameObject.name);
@@ -14,6 +28,21 @@ public class BeaverController : MonoBehaviour
             currentTree = other.gameObject;
             Debug.Log("Near tree: " + currentTree.name);
         }
+        if (other.gameObject.name.StartsWith("Dam")) {
+            isNearDam = true;
+            currentDam = other.gameObject;
+            Debug.Log("Near dam: " + currentDam.name);
+        }
+        if (other.gameObject.name.StartsWith("Land")) {
+            if (other.gameObject.CompareTag("EnemyZone") && isPlayerBeaver) {
+                Debug.Log("In Enemy Zone");
+                isInEnemyZone = true;
+            }
+            if (other.gameObject.CompareTag("PlayerZone") && !isPlayerBeaver) {
+                Debug.Log("In Player Zone");
+                isInEnemyZone = true;
+            }
+        }
     }
 
     void OnTriggerExit(Collider other) {
@@ -21,6 +50,19 @@ public class BeaverController : MonoBehaviour
             isNearTree = false;
             currentTree = null;
             Debug.Log("Not near tree");
+        }
+        if (other.gameObject.name.StartsWith("Dam")) {
+            isNearDam = false;
+            currentDam = null;
+            Debug.Log("Not near dam");
+        }
+        if (other.gameObject.CompareTag("EnemyZone") && isPlayerBeaver) {
+            isInEnemyZone = false;
+            Debug.Log("Not in Enemy Zone");
+        }
+        if (other.gameObject.CompareTag("PlayerZone") && !isPlayerBeaver) {
+            isInEnemyZone = false;
+            Debug.Log("Not in Enemy Zone");
         }
     }
 
@@ -33,20 +75,43 @@ public class BeaverController : MonoBehaviour
     }
 
     public void Chew() {
-        if (isNearTree) {
+        if (isNearTree && !isHoldingLog && currentTree != null) {
             Debug.Log("Chew tree: " + currentTree.name);
+            currentTree.SetActive(false);
+            Transform mouthLog = transform.Find("MouthLog");
+            Debug.Log("MouthLog: " + mouthLog.gameObject.name);
+            mouthLog.gameObject.GetComponent<MeshRenderer>().enabled = true;
+            isHoldingLog = true;
         }
     }
 
-    public void buildDam() {
-        Debug.Log("Build dam");
+    public void BuildDam() {
+        if (isHoldingLog && isInEnemyZone && currentDam != null) {
+            Debug.Log("Build dam");
+            Transform mouthLog = transform.Find("MouthLog");
+            mouthLog.gameObject.GetComponent<MeshRenderer>().enabled = false;
+            if (isPlayerBeaver) {
+                sandbox.GetInstance().EnemyDamLevel += 1;
+            } else {
+                sandbox.GetInstance().PlayerDamLevel += 1;
+            }
+            isHoldingLog = false;
+        }
     }
 
-    public void buildLodge() {
+    public void BreakDam() {
+        if (isNearDam && !isInEnemyZone && currentDam.gameObject.GetComponent<MeshRenderer>().enabled) {
+            Debug.Log("Break dam");
+            if (isPlayerBeaver) {
+                sandbox.GetInstance().EnemyDamLevel -= 1;
+            } else {
+                sandbox.GetInstance().PlayerDamLevel -= 1;
+            }
+        }
+    }
+
+    // TODO: Implement lodge building later
+    public void BuildLodge() {
         Debug.Log("Build lodge");
-    }
-
-    public void breakDam() {
-        Debug.Log("Break dam");
     }
 }
