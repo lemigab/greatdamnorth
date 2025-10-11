@@ -17,10 +17,10 @@ public class SandboxGlobal : MonoBehaviour
     private void Start()
     {
         _instance = this;
-        playerMouthLog.SetActive(false);
-        enemyMouthLog.SetActive(false);
-        playerDam.SetActive(false);
-        enemyDam.SetActive(false);
+        playerMouthLog.GetComponent<MeshRenderer>().enabled = false;
+        enemyMouthLog.GetComponent<MeshRenderer>().enabled = false;
+        playerDam.GetComponent<MeshRenderer>().enabled = false;
+        enemyDam.GetComponent<MeshRenderer>().enabled = false;
     }
 
 
@@ -32,13 +32,13 @@ public class SandboxGlobal : MonoBehaviour
     public bool PlayerHoldingLog
     {
         get { return _playerHoldingLog; }
-        set { _playerHoldingLog = value; playerMouthLog.SetActive(value); }
+        set { _playerHoldingLog = value; playerMouthLog.GetComponent<MeshRenderer>().enabled = value; }
     }
 
     public bool EnemyHoldingLog
     {
         get { return _enemyHoldingLog; }
-        set { _enemyHoldingLog = value; enemyMouthLog.SetActive(value); }
+        set { _enemyHoldingLog = value; enemyMouthLog.GetComponent<MeshRenderer>().enabled = value; }
     }
 
 
@@ -50,13 +50,13 @@ public class SandboxGlobal : MonoBehaviour
     public short PlayerDamLevel
     {
         get { return _playerDamLevel; }
-        set { _playerDamLevel = value; playerDam.SetActive(value > 0); }
+        set { _playerDamLevel = value; playerDam.GetComponent<MeshRenderer>().enabled = (value < 1); }
     }
 
     public short EnemyDamLevel
     {
         get { return _enemyDamLevel; }
-        set { _enemyDamLevel = value; enemyDam.SetActive(value > 0); }
+        set { _enemyDamLevel = value; enemyDam.GetComponent<MeshRenderer>().enabled = (value < 1); }
     }
 
 
