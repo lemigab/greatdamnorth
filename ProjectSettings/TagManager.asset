@@ -6,6 +6,8 @@ TagManager:
   tags:
   - Tree
   - Dam
+  - PlayerZone
+  - EnemyZone
   layers:
   - Default
   - TransparentFX

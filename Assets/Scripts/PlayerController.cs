@@ -28,12 +28,10 @@ public class PlayerController : MonoBehaviour
         }
 
         if (input.Player.Interact.IsPressed()) {
-            Debug.Log("Building Dam: " + beaver.isHoldingLog);
-            if (beaver.isHoldingLog) {
-                beaver.BuildDam();
-            } else {
-                beaver.BreakDam();
-            }
+            beaver.BuildDam();
+        }
+        if (input.Player.BreakDam.IsPressed()) {
+            beaver.BreakDam();
         }
     }
 

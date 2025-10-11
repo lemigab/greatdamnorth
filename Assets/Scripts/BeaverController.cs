@@ -85,13 +85,14 @@ public class BeaverController : MonoBehaviour
 
     public void BuildDam() {
         if (isHoldingLog && isInEnemyZone && currentDam != null) {
-            Debug.Log("Build dam");
+            Debug.Log("Build dam: " + currentDam.name);
             Transform mouthLog = transform.Find("MouthLog");
             mouthLog.gameObject.GetComponent<MeshRenderer>().enabled = false;
             if (isPlayerBeaver) {
-                SandboxGlobal.GetInstance().EnemyDamLevel += 1;
+                SandboxGlobal.GetInstance().EnemyDamLevel++;
+                Debug.Log("Enemy dam level: " + SandboxGlobal.GetInstance().EnemyDamLevel);
             } else {
-                SandboxGlobal.GetInstance().PlayerDamLevel += 1;
+                SandboxGlobal.GetInstance().PlayerDamLevel++;
             }
             isHoldingLog = false;
         }
@@ -101,9 +102,9 @@ public class BeaverController : MonoBehaviour
         if (isNearDam && !isInEnemyZone && currentDam.gameObject.GetComponent<MeshRenderer>().enabled) {
             Debug.Log("Break dam");
             if (isPlayerBeaver) {
-                SandboxGlobal.GetInstance().EnemyDamLevel -= 1;
+                SandboxGlobal.GetInstance().EnemyDamLevel--;
             } else {
-                SandboxGlobal.GetInstance().PlayerDamLevel -= 1;
+                SandboxGlobal.GetInstance().PlayerDamLevel--;
             }
         }
     }
