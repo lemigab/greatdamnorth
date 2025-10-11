@@ -11,7 +11,7 @@ public class SandboxGlobal : MonoBehaviour
 
     // Acess this script globally
     private static SandboxGlobal _instance;
-    public SandboxGlobal GetInstance() => _instance;
+    public static SandboxGlobal GetInstance() => _instance;
 
     // Setup code
     private void Start()
