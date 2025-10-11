@@ -26,6 +26,13 @@ public class PlayerController : MonoBehaviour
         if (input.Player.Chew.IsPressed()) {
             beaver.Chew();
         }
+
+        if (input.Player.Interact.IsPressed()) {
+            beaver.BuildDam();
+        }
+        if (input.Player.BreakDam.IsPressed()) {
+            beaver.BreakDam();
+        }
     }
 
     void OnEnable()

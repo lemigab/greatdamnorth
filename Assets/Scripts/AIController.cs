@@ -173,7 +173,7 @@ public class AIController : MonoBehaviour
 
         if (actionTimer <= 0f)
         {
-            beaver.breakDam();
+            beaver.BreakDam();
             global.EnemyDamLevel = 0; // Reset enemy dam level
             currentState = AIState.Patrol_NoLog;
         }

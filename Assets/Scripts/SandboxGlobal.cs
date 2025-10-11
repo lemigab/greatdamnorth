@@ -1,4 +1,5 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
 
 public class SandboxGlobal : MonoBehaviour
@@ -9,9 +10,14 @@ public class SandboxGlobal : MonoBehaviour
     public GameObject playerDam;
     public GameObject enemyDam;
 
+    // Background references
+    public TextMeshProUGUI playerLevel;
+    public TextMeshProUGUI enemyLevel;
+    public TextMeshProUGUI enemyState;
+
     // Acess this script globally
     private static SandboxGlobal _instance;
-    public SandboxGlobal GetInstance() => _instance;
+    public static SandboxGlobal GetInstance() => _instance;
 
     // Setup code
     private void Start()
@@ -21,6 +27,13 @@ public class SandboxGlobal : MonoBehaviour
         enemyMouthLog.GetComponent<MeshRenderer>().enabled = false;
         playerDam.GetComponent<MeshRenderer>().enabled = false;
         enemyDam.GetComponent<MeshRenderer>().enabled = false;
+    }
+
+
+    // Background updates
+    private void Update()
+    {
+        
     }
 
 
@@ -50,13 +63,31 @@ public class SandboxGlobal : MonoBehaviour
     public short PlayerDamLevel
     {
         get { return _playerDamLevel; }
-        set { _playerDamLevel = value; playerDam.GetComponent<MeshRenderer>().enabled = (value > 0); }
+        set
+        {
+            _playerDamLevel = value;
+            playerLevel.text = "Dam Lvl - " + value;
+            playerDam.GetComponent<MeshRenderer>().enabled = (value > 0);
+            Vector3 s = playerDam.transform.localScale;
+            float dlt = (value - 1) * 10f;
+            if (value > 0) playerDam.transform.localScale
+                    = new(s.x + dlt, s.y + dlt, s.z + dlt);
+        }
     }
 
     public short EnemyDamLevel
     {
         get { return _enemyDamLevel; }
-        set { _enemyDamLevel = value; enemyDam.GetComponent<MeshRenderer>().enabled = (value > 0); }
+        set
+        {
+            _enemyDamLevel = value;
+            enemyLevel.text = "Dam Lvl - " + value;
+            enemyDam.GetComponent<MeshRenderer>().enabled = (value > 0);
+            Vector3 s = enemyDam.transform.localScale;
+            float dlt = (value - 1) * 10f;
+            if (value > 0) enemyDam.transform.localScale
+                    = new(s.x + dlt, s.y + dlt, s.z + dlt);
+        }
     }
 
 
