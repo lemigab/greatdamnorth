@@ -162,6 +162,7 @@ public class AIController : MonoBehaviour
             beaver.buildDam();
             global.PlayerDamLevel += 1;
             global.EnemyHoldingLog = false;
+            targetTree = FindNearestTree();
             currentState = AIState.Patrol_NoLog;
         }
     }
@@ -188,7 +189,6 @@ public class AIController : MonoBehaviour
         beaver.Move(direction);
     }
 
-
     private void PickNewPatrolPoint()
     {
         Vector2 randomCircle = Random.insideUnitCircle * patrolRadius;
@@ -198,8 +198,6 @@ public class AIController : MonoBehaviour
             transform.position.z + randomCircle.y
         );
     }
-
-
 
     private GameObject FindNearestTree()
     {
