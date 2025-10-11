@@ -50,13 +50,13 @@ public class SandboxGlobal : MonoBehaviour
     public short PlayerDamLevel
     {
         get { return _playerDamLevel; }
-        set { _playerDamLevel = value; playerDam.GetComponent<MeshRenderer>().enabled = (value < 1); }
+        set { _playerDamLevel = value; playerDam.GetComponent<MeshRenderer>().enabled = (value > 0); }
     }
 
     public short EnemyDamLevel
     {
         get { return _enemyDamLevel; }
-        set { _enemyDamLevel = value; enemyDam.GetComponent<MeshRenderer>().enabled = (value < 1); }
+        set { _enemyDamLevel = value; enemyDam.GetComponent<MeshRenderer>().enabled = (value > 0); }
     }
 
 
