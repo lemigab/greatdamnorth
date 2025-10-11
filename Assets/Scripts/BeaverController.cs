@@ -54,13 +54,15 @@ public class BeaverController : MonoBehaviour
             currentDam = null;
             Debug.Log("Not near dam");
         }
-        if (other.gameObject.CompareTag("EnemyZone") && isPlayerBeaver) {
-            isInEnemyZone = false;
-            Debug.Log("Not in Enemy Zone");
-        }
-        if (other.gameObject.CompareTag("PlayerZone") && !isPlayerBeaver) {
-            isInEnemyZone = false;
-            Debug.Log("Not in Enemy Zone");
+        if (other.gameObject.name.StartsWith("Land")) {
+            if (other.gameObject.CompareTag("EnemyZone") && isPlayerBeaver) {
+                isInEnemyZone = false;
+                Debug.Log("Not in Enemy Zone");
+            }
+            if (other.gameObject.CompareTag("PlayerZone") && !isPlayerBeaver) {
+                isInEnemyZone = false;
+                Debug.Log("Not in Enemy Zone");
+            }
         }
     }
 
@@ -80,6 +82,7 @@ public class BeaverController : MonoBehaviour
             Debug.Log("MouthLog: " + mouthLog.gameObject.name);
             mouthLog.gameObject.GetComponent<MeshRenderer>().enabled = true;
             isHoldingLog = true;
+            currentTree = null;
         }
     }
 
