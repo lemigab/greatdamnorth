@@ -775,9 +775,10 @@ GameObject:
   - component: {fileID: 732693949}
   - component: {fileID: 732693951}
   - component: {fileID: 732693950}
+  - component: {fileID: 732693952}
   m_Layer: 0
   m_Name: Dam
-  m_TagString: Untagged
+  m_TagString: Dam
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -853,6 +854,27 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 732693948}
   m_Mesh: {fileID: 3323506845839024359, guid: beb772b04cd4ece4184c3903b1a7c06c, type: 3}
+--- !u!65 &732693952
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 732693948}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.019999998, y: 0.02, z: 0.019999998}
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &746282293
 GameObject:
   m_ObjectHideFlags: 0
@@ -1506,6 +1528,7 @@ MonoBehaviour:
   moveSpeed: 5
   rotationSpeed: 10
   isNearTree: 0
+  isHoldingLog: 0
   currentTree: {fileID: 0}
 --- !u!114 &1727052821
 MonoBehaviour:
@@ -1651,7 +1674,7 @@ GameObject:
   - component: {fileID: 1886925210}
   m_Layer: 0
   m_Name: Tree0
-  m_TagString: Untagged
+  m_TagString: Tree
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1666,7 +1689,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0.7071068, y: -0, z: -0, w: 0.7071068}
   m_LocalPosition: {x: 4, y: 2, z: 3}
-  m_LocalScale: {x: 50, y: 50, z: 200.00003}
+  m_LocalScale: {x: 50, y: 50, z: 200}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 438095661}
