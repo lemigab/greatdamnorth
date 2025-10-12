@@ -13,3 +13,8 @@ The AI will only break a dam in its own territory and will only build a dam in t
 ## Demo Video
 https://drive.google.com/file/d/1zi2KMyx2k87uFZ6gZ8g4rFiyfTBkeabk/view?usp=drive_link
 
+##Group Members
+CISC 486 Group 18 (Great Dam North)
+Owen Meima (21owm1)
+Gabriel Lemieux (19gml2) 
+Charlie Kevill (21cmk11)
