@@ -23,29 +23,29 @@ public class BeaverController : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        Debug.Log("OnTriggerEnter: " + other.gameObject.name);
+        //Debug.Log("OnTriggerEnter: " + other.gameObject.name);
         if (other.gameObject.name.StartsWith("Tree"))
         {
             isNearTree = true;
             currentTree = other.gameObject;
-            Debug.Log("Near tree: " + currentTree.name);
+           // Debug.Log("Near tree: " + currentTree.name);
         }
         if (other.gameObject.name.StartsWith("Dam"))
         {
             isNearDam = true;
             currentDam = other.gameObject;
-            Debug.Log("Near dam: " + currentDam.name);
+           // Debug.Log("Near dam: " + currentDam.name);
         }
         if (other.gameObject.name.StartsWith("Land"))
         {
             if (other.gameObject.CompareTag("EnemyZone") && isPlayerBeaver)
             {
-                Debug.Log("In Enemy Zone");
+              //  Debug.Log("In Enemy Zone");
                 isInEnemyZone = true;
             }
             if (other.gameObject.CompareTag("PlayerZone") && !isPlayerBeaver)
             {
-                Debug.Log("In Player Zone");
+               // Debug.Log("In Player Zone");
                 isInEnemyZone = true;
             }
         }
@@ -57,25 +57,25 @@ public class BeaverController : MonoBehaviour
         {
             isNearTree = false;
             currentTree = null;
-            Debug.Log("Not near tree");
+           // Debug.Log("Not near tree");
         }
         if (other.gameObject.name.StartsWith("Dam"))
         {
             isNearDam = false;
             currentDam = null;
-            Debug.Log("Not near dam");
+            //Debug.Log("Not near dam");
         }
         if (other.gameObject.name.StartsWith("Land"))
         {
             if (other.gameObject.CompareTag("EnemyZone") && isPlayerBeaver)
             {
                 isInEnemyZone = false;
-                Debug.Log("Not in Enemy Zone");
+                //Debug.Log("Not in Enemy Zone");
             }
             if (other.gameObject.CompareTag("PlayerZone") && !isPlayerBeaver)
             {
                 isInEnemyZone = false;
-                Debug.Log("Not in Enemy Zone");
+                //Debug.Log("Not in Enemy Zone");
             }
         }
     }
@@ -93,7 +93,7 @@ public class BeaverController : MonoBehaviour
     {
         if (isNearTree && !isHoldingLog && currentTree != null)
         {
-            Debug.Log("Chew tree: " + currentTree.name);
+            //Debug.Log("Chew tree: " + currentTree.name);
             currentTree.SetActive(false);
             if (isPlayerBeaver) SandboxGlobal.GetInstance().PlayerHoldingLog = true;
             else SandboxGlobal.GetInstance().EnemyHoldingLog = true;
@@ -106,12 +106,12 @@ public class BeaverController : MonoBehaviour
     {
         if (isHoldingLog && isInEnemyZone && currentDam != null)
         {
-            Debug.Log("Build dam: " + currentDam.name);
+           // Debug.Log("Build dam: " + currentDam.name);
             if (isPlayerBeaver)
             {
                 SandboxGlobal.GetInstance().EnemyDamLevel++;
                 SandboxGlobal.GetInstance().PlayerHoldingLog = false;
-                Debug.Log("Enemy dam level: " + SandboxGlobal.GetInstance().EnemyDamLevel);
+               // Debug.Log("Enemy dam level: " + SandboxGlobal.GetInstance().EnemyDamLevel);
             }
             else
             {
@@ -128,7 +128,7 @@ public class BeaverController : MonoBehaviour
         if (isNearDam && !isInEnemyZone && !isHoldingLog
             && currentDam.gameObject.GetComponent<MeshRenderer>().enabled)
         {
-            Debug.Log("Break dam");
+            //Debug.Log("Break dam");
             if (isPlayerBeaver)
             {
                 SandboxGlobal.GetInstance().PlayerDamLevel--;
@@ -146,6 +146,6 @@ public class BeaverController : MonoBehaviour
     // TODO: Implement lodge building later
     public void BuildLodge()
     {
-        Debug.Log("Build lodge");
+        //Debug.Log("Build lodge");
     }
 }
