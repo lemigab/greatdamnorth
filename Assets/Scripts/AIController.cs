@@ -10,14 +10,14 @@ public class AIController : MonoBehaviour
 {
     public enum AIState
     {
-        Patrol_NoLog,
-        Patrol_Log,
-        ChewTree,
-        BuildDam,
-        BreakDam
+        Patrol_With_No_Log,
+        Patrol_With_Log,
+        Chew_Tree,
+        Build_Dam,
+        Break_Dam
     }
 
-    private AIState currentState = AIState.Patrol_NoLog;
+    private AIState currentState = AIState.Patrol_With_No_Log;
 
     public AIState GetState() => currentState;
 
@@ -53,19 +53,19 @@ public class AIController : MonoBehaviour
     {
         switch (currentState)
         {
-            case AIState.Patrol_NoLog:
+            case AIState.Patrol_With_No_Log:
                 Patrol_NoLog();
                 break;
-            case AIState.Patrol_Log:
+            case AIState.Patrol_With_Log:
                 Patrol_Log();
                 break;
-            case AIState.ChewTree:
+            case AIState.Chew_Tree:
                 ChewTree();
                 break;
-            case AIState.BuildDam:
+            case AIState.Build_Dam:
                 BuildDam();
                 break;
-            case AIState.BreakDam:
+            case AIState.Break_Dam:
                 BreakDam();
                 break;
         }
@@ -84,7 +84,7 @@ public class AIController : MonoBehaviour
             // Only switch to break state if actually touching dam collider
             if (currentDamCollider != null && currentDamCollider.gameObject == targetDam)
             {
-                currentState = AIState.BreakDam;
+                currentState = AIState.Break_Dam;
                 actionTimer = breakDuration;
             }
             return;
@@ -101,7 +101,7 @@ public class AIController : MonoBehaviour
             // Only chew if physically touching the tree
             if (currentTreeCollider != null && currentTreeCollider.gameObject == targetTree)
             {
-                currentState = AIState.ChewTree;
+                currentState = AIState.Chew_Tree;
                 actionTimer = chewDuration;
             }
             return;
@@ -132,7 +132,7 @@ public class AIController : MonoBehaviour
 
             if (distance < 0.5f) // tweak stop distance as needed
             {
-                currentState = AIState.BuildDam;
+                currentState = AIState.Build_Dam;
                 actionTimer = buildDuration;
             }
 
@@ -152,7 +152,7 @@ public class AIController : MonoBehaviour
         {
             beaver.Chew();
             //global.EnemyHoldingLog = true;  // AI beaver now "has a log"
-            currentState = AIState.Patrol_Log;
+            currentState = AIState.Patrol_With_Log;
         }
     }
 
@@ -166,7 +166,7 @@ public class AIController : MonoBehaviour
             //global.PlayerDamLevel += 1;
             //global.EnemyHoldingLog = false;
             targetTree = FindNearestTree();
-            currentState = AIState.Patrol_NoLog;
+            currentState = AIState.Patrol_With_No_Log;
         }
     }
 
@@ -178,7 +178,7 @@ public class AIController : MonoBehaviour
         {
             beaver.BreakDam();
             //global.EnemyHoldingLog = true;  // AI beaver now "has a log"
-            currentState = AIState.Patrol_Log;
+            currentState = AIState.Patrol_With_Log;
         }
     }
 
