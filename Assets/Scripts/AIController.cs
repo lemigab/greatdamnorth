@@ -159,7 +159,7 @@ public class AIController : MonoBehaviour
 
         if (actionTimer <= 0f)
         {
-            beaver.buildDam();
+            beaver.BuildDam();
             global.PlayerDamLevel += 1;
             global.EnemyHoldingLog = false;
             targetTree = FindNearestTree();
@@ -174,8 +174,8 @@ public class AIController : MonoBehaviour
         if (actionTimer <= 0f)
         {
             beaver.BreakDam();
-            global.EnemyDamLevel = 0; // Reset enemy dam level
-            currentState = AIState.Patrol_NoLog;
+            global.EnemyHoldingLog = true;  // AI beaver now "has a log"
+            currentState = AIState.Patrol_Log;
         }
     }
 
