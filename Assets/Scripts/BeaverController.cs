@@ -124,7 +124,7 @@ public class BeaverController : MonoBehaviour
 
     public void BreakDam()
     {
-        Debug.Log(isHoldingLog);
+        //Debug.Log(isHoldingLog);
         if (isNearDam && !isInEnemyZone && !isHoldingLog
             && currentDam.gameObject.GetComponent<MeshRenderer>().enabled)
         {
