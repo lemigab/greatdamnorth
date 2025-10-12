@@ -8,7 +8,7 @@ using System.Collections;
 [RequireComponent(typeof(BeaverController))]
 public class AIController : MonoBehaviour
 {
-    private enum AIState
+    public enum AIState
     {
         Patrol_NoLog,
         Patrol_Log,
@@ -18,6 +18,9 @@ public class AIController : MonoBehaviour
     }
 
     private AIState currentState = AIState.Patrol_NoLog;
+
+    public AIState GetState() => currentState;
+
     private BeaverController beaver;
     private SandboxGlobal global;
 
@@ -32,9 +35,9 @@ public class AIController : MonoBehaviour
 
     // Timer control
     private float actionTimer = 0f;
-    private float chewDuration = 3f;
-    private float buildDuration = 3f;
-    private float breakDuration = 3f;
+    private float chewDuration = 1.5f;
+    private float buildDuration = 1.5f;
+    private float breakDuration = 1.5f;
 
     private Collider currentTreeCollider;
     private Collider currentDamCollider;
@@ -42,7 +45,7 @@ public class AIController : MonoBehaviour
     void Start()
     {
         beaver = GetComponent<BeaverController>();
-        global = Object.FindFirstObjectByType<SandboxGlobal>();
+        global = SandboxGlobal.GetInstance();
         PickNewPatrolPoint();
     }
 
@@ -148,7 +151,7 @@ public class AIController : MonoBehaviour
         if (actionTimer <= 0f)
         {
             beaver.Chew();
-            global.EnemyHoldingLog = true;  // AI beaver now "has a log"
+            //global.EnemyHoldingLog = true;  // AI beaver now "has a log"
             currentState = AIState.Patrol_Log;
         }
     }
@@ -160,8 +163,8 @@ public class AIController : MonoBehaviour
         if (actionTimer <= 0f)
         {
             beaver.BuildDam();
-            global.PlayerDamLevel += 1;
-            global.EnemyHoldingLog = false;
+            //global.PlayerDamLevel += 1;
+            //global.EnemyHoldingLog = false;
             targetTree = FindNearestTree();
             currentState = AIState.Patrol_NoLog;
         }
@@ -174,7 +177,7 @@ public class AIController : MonoBehaviour
         if (actionTimer <= 0f)
         {
             beaver.BreakDam();
-            global.EnemyHoldingLog = true;  // AI beaver now "has a log"
+            //global.EnemyHoldingLog = true;  // AI beaver now "has a log"
             currentState = AIState.Patrol_Log;
         }
     }

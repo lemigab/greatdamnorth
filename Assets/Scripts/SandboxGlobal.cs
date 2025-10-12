@@ -14,15 +14,19 @@ public class SandboxGlobal : MonoBehaviour
     public TextMeshProUGUI playerLevel;
     public TextMeshProUGUI enemyLevel;
     public TextMeshProUGUI enemyState;
+    public AIController enemyAI;
 
     // Acess this script globally
     private static SandboxGlobal _instance;
     public static SandboxGlobal GetInstance() => _instance;
 
+    private static Vector3 s;
+
     // Setup code
     private void Start()
     {
         _instance = this;
+        s = playerDam.transform.localScale;
         playerMouthLog.GetComponent<MeshRenderer>().enabled = false;
         enemyMouthLog.GetComponent<MeshRenderer>().enabled = false;
         playerDam.GetComponent<MeshRenderer>().enabled = false;
@@ -31,9 +35,9 @@ public class SandboxGlobal : MonoBehaviour
 
 
     // Background updates
-    private void Update()
+    private void FixedUpdate()
     {
-        
+        enemyState.text = "Enemy FSM State:\n" + enemyAI.GetState().ToString();
     }
 
 
@@ -68,8 +72,7 @@ public class SandboxGlobal : MonoBehaviour
             _playerDamLevel = value;
             playerLevel.text = "Dam Lvl - " + value;
             playerDam.GetComponent<MeshRenderer>().enabled = (value > 0);
-            Vector3 s = playerDam.transform.localScale;
-            float dlt = (value - 1) * 10f;
+            float dlt = (value - 1) * 8f;
             if (value > 0) playerDam.transform.localScale
                     = new(s.x + dlt, s.y + dlt, s.z + dlt);
         }
@@ -83,8 +86,7 @@ public class SandboxGlobal : MonoBehaviour
             _enemyDamLevel = value;
             enemyLevel.text = "Dam Lvl - " + value;
             enemyDam.GetComponent<MeshRenderer>().enabled = (value > 0);
-            Vector3 s = enemyDam.transform.localScale;
-            float dlt = (value - 1) * 10f;
+            float dlt = (value - 1) * 8f;
             if (value > 0) enemyDam.transform.localScale
                     = new(s.x + dlt, s.y + dlt, s.z + dlt);
         }
