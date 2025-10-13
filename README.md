@@ -1,4 +1,4 @@
-# Asignment 1
+# Assignment 2 - FSM Machine Enemy
 
 ## FSM
 <img width="503" height="541" alt="Screenshot 2025-10-12 at 5 18 43 PM" src="https://github.com/user-attachments/assets/6ebf5a6b-3a7b-4041-b79f-83d1fed4152c" />
