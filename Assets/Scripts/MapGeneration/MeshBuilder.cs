@@ -37,6 +37,7 @@ public class MeshBuilder : MonoBehaviour
 
 
     // Builds a hexagonal plane out of a given square array.
+    // Math for the hexagon midpoints: https://www.desmos.com/calculator/mc0lxgyfno 
     // Hexagon will be triangulated like in: https://i.sstatic.net/CGBYv.jpg
     // - Rows of the array are rows of the vertices in the above image.
     // - The tail of each row (sans the middle one) will be ignored...
