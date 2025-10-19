@@ -24,7 +24,7 @@ public class MeshBuilder : MonoBehaviour
     public void Generate()
     {
         resolution = 1 + resolution - (resolution % 2);
-        float[,] flts = NoiseMapBuilder.Export(resolution, seed,
+        float[,] flts = NoiseMap.Export(resolution, seed,
             hillHeight, hillDensity, FbOctaveCount, 0.05f, FbOctaveDamping);
 
         ApplyMesh(CreateFromNoiseGrid(

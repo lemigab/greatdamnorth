@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-public class NoiseMapBuilder
+public class NoiseMap
 {
 
     /*
@@ -30,13 +30,13 @@ public class NoiseMapBuilder
         int elevationScale, float genDensity,
         int fbOctaves, float fbFrequency, float fbDamping)
     {
-        NoiseMapBuilder c = new(size, seed);
+        NoiseMap c = new(size, seed);
         c.BuildTopography(elevationScale, genDensity,
             fbOctaves, fbFrequency, fbDamping);
         return c._map;
     }
 
-    private NoiseMapBuilder(int size, int seed)
+    private NoiseMap(int size, int seed)
     {
         _p = new int[PERM_LEN * 2];
         for (int i = 0; i < PERM_LEN; i++) _p[i] = i;
@@ -106,7 +106,7 @@ public class NoiseMapBuilder
         return result;
     }
 
-    private NoiseMapBuilder BuildTopography(
+    private NoiseMap BuildTopography(
             int elevationScale, float genDensity,
             int fbOctaves, float fbFrequency, float fbDamping)
     {
