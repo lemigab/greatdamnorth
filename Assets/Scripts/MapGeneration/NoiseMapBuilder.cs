@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-public class TerrainBuilder
+public class NoiseMapBuilder
 {
 
     /*
@@ -26,16 +26,17 @@ public class TerrainBuilder
     private readonly int _size;
     private readonly int[] _p;
 
-    public delegate void Construct(TerrainBuilder constructor);
-
-    public static float[,] Export(int size, int seed, Construct construct)
+    public static float[,] Export(int size, int seed,
+        int elevationScale, float genDensity,
+        int fbOctaves, float fbFrequency, float fbDamping)
     {
-        TerrainBuilder c = new(size, seed);
-        construct(c);
+        NoiseMapBuilder c = new(size, seed);
+        c.BuildTopography(elevationScale, genDensity,
+            fbOctaves, fbFrequency, fbDamping);
         return c._map;
     }
 
-    private TerrainBuilder(int size, int seed)
+    private NoiseMapBuilder(int size, int seed)
     {
         _p = new int[PERM_LEN * 2];
         for (int i = 0; i < PERM_LEN; i++) _p[i] = i;
@@ -105,8 +106,8 @@ public class TerrainBuilder
         return result;
     }
 
-    public TerrainBuilder BuildTopography(
-            int elevationLayers, float genDensity,
+    private NoiseMapBuilder BuildTopography(
+            int elevationScale, float genDensity,
             int fbOctaves, float fbFrequency, float fbDamping)
     {
         if (fbOctaves < 1 || fbFrequency < 0f
@@ -121,7 +122,7 @@ public class TerrainBuilder
                     fbOctaves, fbFrequency, fbDamping);
 
                 val = (val + 1f) / 2f;
-                _map[x, y] = val * elevationLayers;
+                _map[x, y] = val * elevationScale;
             }
 
         return this;
