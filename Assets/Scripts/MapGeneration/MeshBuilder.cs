@@ -21,9 +21,8 @@ public class MeshBuilder : MonoBehaviour
     public float hillDensity = 1.2f;
     public int FbOctaveCount = 3;
     public float FbOctaveDamping = 0.5f;
-    public float borderEasing = 1f;
-
-
+    public float borderEasing = 0.1f;
+    public float riverEasing = 10f;
 
 
     [ContextMenu("Generate")]
@@ -77,8 +76,10 @@ public class MeshBuilder : MonoBehaviour
         // River options
         int n = grid.GetLength(0);
         bool hasRiver = riverIn != HexSide.NULL;
-        Vector2Int rInPos = EquivHexPos(riverIn, n);
-        Vector2Int rOutPos = EquivHexPos(riverOut, n);
+        Vector2 rInPos = EquivHexPos(riverIn);
+        Vector2 rOutPos = EquivHexPos(riverOut);
+        Vector2 cntPos = EquivHexPos(HexSide.NULL);
+        System.Random rng = new();
 
         // Build verts
         int fn = n / 2; // floor division
@@ -94,19 +95,28 @@ public class MeshBuilder : MonoBehaviour
             float offZ = row * hSq3;
             for (int pt = 0; pt < rowLen; pt++)
             {
-                // distance to border
-                int distToEdge = Math.Min(
-                    Math.Min(pt, rowLen - 1 - pt),
-                    Math.Min(row, n - 1 - row));
-                // distance to river 
-                float distToRiv = !hasRiver ? 0f : DistanceToRiver(
-                    rInPos.x, rInPos.y, rOutPos.x, rOutPos.y, row, pt);
                 // terrain height adjusted to border/river bias
                 float biasedAlt = grid[row, pt];
                 if (forceEdge)
                 {
+                    // distance to border
+                    int distToEdge = Math.Min(
+                        Math.Min(pt, rowLen - 1 - pt),
+                        Math.Min(row, n - 1 - row));
                     biasedAlt = HexEdgeLerp(biasedAlt, distToEdge);
-                    biasedAlt = NearRiverLerp(biasedAlt, distToRiv);
+                    // distance to river 
+                    if (hasRiver)
+                    {
+                        float distToRiv = Math.Min(
+                            DistanceToRiver(cntPos.x, cntPos.y,
+                            rOutPos.x, rOutPos.y, unitSize * ((-0.5f * offX) + pt), unitSize * offZ),
+
+                            DistanceToRiver(rInPos.x, rInPos.y,
+                            cntPos.x, cntPos.y, unitSize * ((-0.5f * offX) + pt), unitSize * offZ)
+                            );
+                        if (distToRiv < n / 16f)
+                            biasedAlt = NearRiverLerp(biasedAlt, distToRiv);
+                    }
                 }
                 // add to vertex list
                 tempVerts.Add(new Vector3(
@@ -196,42 +206,56 @@ public class MeshBuilder : MonoBehaviour
 
     private float NearRiverLerp(float height, float distFromRiver)
     {
-        float ease = 1f / ((borderEasing * distFromRiver) + 1);
-        return ease * height; // lerp between 0 and target height
+        float ease = 1f / ((riverEasing * distFromRiver) + 1);
+        return height + (ease * (0 - height));
     }
 
     // Distance of {x0,y0} from the line going through p,q
+    // Shamelessly stolen from StackOverflow
     private float DistanceToRiver(
         float px, float py, float qx, float qy,
         float x0, float y0)
     {
-        float prll = Math.Abs(
-            (py - qy) * x0 - (px - qx) * y0 + (px * qy) - (py * qx));
-        float len = (float)Math.Sqrt(
-            (py - qy) * (py - qy) + (px - qx) * (px - qx));
-        return prll / len;
+        float A = x0 - px;
+        float B = y0 - py;
+        float C = qx - px;
+        float D = qy - py;
+
+        float dot = A * C + B * D;
+        float len_sq = C * C + D * D;
+        float param = -1;
+        if (len_sq != 0) param = dot / len_sq;
+
+        float xx, yy;
+
+        if (param < 0) { xx = px; yy = py; }
+        else if (param > 1) { xx = qx; yy = qy; }
+        else { xx = px + param * C; yy = py + param * D; }
+
+        float dx = x0 - xx;
+        float dy = y0 - yy;
+        return (float)Math.Sqrt(dx * dx + dy * dy);
     }
 
     // Equivalent hex mesh positions of a river node
     // w is the number of vertex rows in the hex
-    private Vector2Int EquivHexPos(HexSide side, int w)
+    private Vector2 EquivHexPos(HexSide side)
     {
-        int x = side switch
+        float w = (resolution - 1) * scale;
+        float w8 = w / 8f;
+        float sq3 = (float)Math.Sqrt(3.0f);
+        float h = sq3 * w / 2f;
+        float xOff = w / 4f;
+        return side switch
         {
-            HexSide.N or HexSide.S => w / 2,
-            HexSide.NW or HexSide.SW => 0,
-            HexSide.NE or HexSide.SE => w - 1,
-            _ => 0,
+            HexSide.N => new(w / 2f - xOff, h),
+            HexSide.NW => new(w8 - xOff, h / 4f * 3f),
+            HexSide.NE => new(w - w8 - xOff, h / 4f * 3f),
+            HexSide.S => new(w / 2f - xOff, 0f),
+            HexSide.SE => new(w - w8 - xOff, h / 4f),
+            HexSide.SW => new(w8 - xOff, h / 4f),
+            _ => new(w / 2f - xOff, h / 2f)
         };
-        int y = side switch
-        {
-            HexSide.N => 0,
-            HexSide.NW or HexSide.NE => (int)((w / 2) * 1.5f),
-            HexSide.S => w - 1,
-            HexSide.SW or HexSide.SE => (int)((w / 2) * 0.5f),
-            _ => 0,
-        };
-        return new(x, y);
     }
 
 }

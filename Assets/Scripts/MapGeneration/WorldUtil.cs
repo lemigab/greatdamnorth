@@ -18,7 +18,7 @@ namespace WorldUtil
             Vector2Int[] vecs = new Vector2Int[vals.Length / 2];
             for (int i = 0; i < vals.Length; i += 2)
             {
-                vecs[i] = new(vals[i], vals[i + 1]);
+                vecs[i / 2] = new(vals[i], vals[i + 1]);
             }
             return vecs;
         }
@@ -81,12 +81,12 @@ namespace WorldUtil
                 {
                     if (river[i].Equals(srcPos))
                     {
-                        if (i == mapSize - 1) 
+                        if (i == river.Length - 1)
                             return OutgoingEdge(srcPos, mapSize);
                         return EdgeFrom(srcPos, river[i + 1]);
                     }
                 }
-            throw new Exception("Position not on any river");
+            return HexSide.NULL;
         }
 
         public static HexSide UpstreamSideOf(
@@ -101,7 +101,7 @@ namespace WorldUtil
                         return EdgeFrom(srcPos, river[i - 1]);
                     }
                 }
-            throw new Exception("Position not on any river");
+            return HexSide.NULL;
         }
 
         private static HexSide OutgoingEdge(Vector2Int srcPos, int mapSize)
@@ -115,13 +115,18 @@ namespace WorldUtil
                 if (x == 0) return HexSide.SE;
                 if (y == 0) return HexSide.SW;
             }
-            else
+            else if (x == n || y == n)
             {
                 if (x == n && y == n) return HexSide.N;
                 if (x == n) return HexSide.NW;
                 if (y == n) return HexSide.NE;
             }
-            throw new Exception("No outgoing edges");
+            else
+            {
+                if (x - y == n / 2) return HexSide.SW;
+                if (y - x == n / 2) return HexSide.SE;
+            }
+            return HexSide.NULL;
         }
 
         private static HexSide EdgeFrom(Vector2Int src, Vector2Int dst)

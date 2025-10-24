@@ -41,10 +41,10 @@ public class WorldBuilder : MonoBehaviour
             int rowLen = mapSize - Math.Abs(i - (mapSize / 2));
             for (int j = 0; j < rowLen; j++)
             {
-                if (i == 0 && j == 0) continue;
-                int trueJ = j > mapSize / 2 ? j + (i - (mapSize / 2)) : j;
+                int trueJ = i > mapSize / 2 ? (j + (i - (mapSize / 2))) : j;
                 Vector2Int truePos = new(i, trueJ);
                 originMeshBuilder.seed = rng.Next(999999);
+                Debug.Log(truePos.ToString());
                 originMeshBuilder.GenerateWithRiverNodes(
                     Constructs.UpstreamSideOf(truePos, mapSize, construct),
                     Constructs.DownstreamSideOf(truePos, mapSize, construct)
@@ -53,7 +53,7 @@ public class WorldBuilder : MonoBehaviour
                 GameObject newWaterHex = Instantiate(originWaterHex);
                 Vector2 pos = new Vector3(
                     rowOrg.x + (j * hexOff.x),
-                    rowOrg.y + (j * hexOff.y)
+                    rowOrg.y + (j * hexOff.y) + (hexW * 2f)
                 );
                 newLandHex.transform.position = new(pos.x, landY, pos.y);
                 newWaterHex.transform.position = new(pos.x, waterY, pos.y);
@@ -83,7 +83,7 @@ public class WorldBuilder : MonoBehaviour
             Tuple<Hex, Hex> hs = new(hexes[road[0]], hexes[road[1]]);
             wRoads.Add(hs);
         }
-        GameWorld.Instance().AddWorld(new(wRivers, wRoads));
+        //GameWorld.Instance().AddWorld(new(wRivers, wRoads));
         Debug.Log("Made a world with " + wRivers.Count + " rivers and " 
             + wRoads.Count + " roads");
     }
