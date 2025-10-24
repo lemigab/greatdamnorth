@@ -14,8 +14,6 @@ public class WorldBuilder : MonoBehaviour
     public int mapSize; // longest diameter
     public Constructs.Construct construct;
 
-    private readonly List<GameObject> _created = new();
-
 
     [ContextMenu("Construct Map")]
     public void ConstructMap()
@@ -49,16 +47,16 @@ public class WorldBuilder : MonoBehaviour
                     Constructs.UpstreamSideOf(truePos, mapSize, construct),
                     Constructs.DownstreamSideOf(truePos, mapSize, construct)
                 );
-                GameObject newLandHex = Instantiate(originLandHex);
-                GameObject newWaterHex = Instantiate(originWaterHex);
+                GameObject newLandHex = Instantiate(originLandHex, transform);
+                GameObject newWaterHex = Instantiate(originWaterHex, transform);
                 Vector2 pos = new Vector3(
                     rowOrg.x + (j * hexOff.x),
                     rowOrg.y + (j * hexOff.y) + (hexW * 2f)
                 );
                 newLandHex.transform.position = new(pos.x, landY, pos.y);
                 newWaterHex.transform.position = new(pos.x, waterY, pos.y);
-                _created.Add(newLandHex);
-                _created.Add(newWaterHex);
+                newLandHex.name = "Land-" + truePos.x + "-" + truePos.y;
+                newWaterHex.name = "Water-" + truePos.x + "-" + truePos.y;
                 hexes.Add(truePos, new(truePos, newLandHex, newWaterHex));
             }
             rowOrg.x += (i < mapSize / 2) ? -hexOff.x : 0;
@@ -84,7 +82,7 @@ public class WorldBuilder : MonoBehaviour
             wRoads.Add(hs);
         }
         //GameWorld.Instance().AddWorld(new(wRivers, wRoads));
-        Debug.Log("Made a world with " + wRivers.Count + " rivers and " 
+        Debug.Log("Made a world with " + wRivers.Count + " rivers and "
             + wRoads.Count + " roads");
     }
 
@@ -92,8 +90,11 @@ public class WorldBuilder : MonoBehaviour
     [ContextMenu("Clear")]
     public void Clear()
     {
-        foreach (GameObject o in _created) DestroyImmediate(o);
-        _created.Clear();
+        List<Transform> children = new();
+        for (int i = 0; i < transform.childCount; i++)
+            children.Add(transform.GetChild(i));
+
+        foreach (Transform t in children) DestroyImmediate(t.gameObject);
     }
 
 }

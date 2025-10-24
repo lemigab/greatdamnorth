@@ -2,9 +2,68 @@ using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace WorldUtil
 {
+
+    public class World
+    {
+        // A list of rivers, which are themselves lists of hexes
+        // Hexes are ordered from start to end within a river
+        public readonly List<List<Hex>> Rivers;
+
+        // A list of roads, which are themselves tuples of two hexes
+        // Order of the tuple is arbitrary since roads are bidirectional
+        public readonly List<Tuple<Hex, Hex>> Roads;
+
+        public World(List<List<Hex>> rivers, List<Tuple<Hex, Hex>> roads)
+        {
+            Rivers = rivers;
+            Roads = roads;
+        }
+
+        public List<Hex> FindRiverWithHex(Hex hex)
+        {
+            foreach (List<Hex> river in Rivers)
+                if (river.Contains(hex)) return river;
+            throw new Exception("Hex not along any river");
+        }
+
+        public List<Hex> UpstreamFrom(Hex target)
+        {
+            List<Hex> r = FindRiverWithHex(target);
+            int hPos = r.IndexOf(target);
+            if (hPos == 0) return new();
+            return r.GetRange(0, hPos);
+        }
+
+        public List<Hex> DownstreamFrom(Hex target)
+        {
+            List<Hex> r = FindRiverWithHex(target);
+            int hPos = r.IndexOf(target);
+            if (hPos == r.Count - 1) return new();
+            return r.GetRange(hPos + 1, r.Count - 1 - hPos);
+        }
+    }
+
+
+    public class Hex
+    {
+        public readonly Vector2Int mapPosition;
+        public readonly GameObject landMesh;
+        public readonly GameObject waterMesh;
+
+        public Hex(Vector2Int mapPosition,
+            GameObject landMesh, GameObject waterMesh)
+        {
+            this.mapPosition = mapPosition;
+            this.landMesh = landMesh;
+            this.waterMesh = waterMesh;
+        }
+    }
+
+
     public static class Constructs
     {
         public enum Construct
@@ -150,40 +209,57 @@ namespace WorldUtil
             }
             throw new Exception("No hex side direction between src and dest");
         }
-
     }
 
 
-    public class World
+    public static class Geometry
     {
-        // A list of rivers, which are themselves lists of hexes
-        // Hexes are ordered from start to end within a river
-        public readonly List<List<Hex>> Rivers;
-
-        // A list of roads, which are themselves tuples of two hexes
-        // Order of the tuple is arbitrary since roads are bidirectional
-        public readonly List<Tuple<Hex, Hex>> Roads;
-
-        public World(List<List<Hex>> rivers, List<Tuple<Hex, Hex>> roads)
+        // Equivalent hex mesh positions of a river node
+        // width is the true (in-game) dimension between two opposite corners
+        public static Vector2 EquivHexPos(HexSide side, float width)
         {
-            Rivers = rivers;
-            Roads = roads;
+            float w = width;
+            float w8 = w / 8f;
+            float sq3 = (float)Math.Sqrt(3.0f);
+            float h = sq3 * w / 2f;
+            float xOff = w / 4f;
+            return side switch
+            {
+                HexSide.N => new(w / 2f - xOff, h),
+                HexSide.NW => new(w8 - xOff, h / 4f * 3f),
+                HexSide.NE => new(w - w8 - xOff, h / 4f * 3f),
+                HexSide.S => new(w / 2f - xOff, 0f),
+                HexSide.SE => new(w - w8 - xOff, h / 4f),
+                HexSide.SW => new(w8 - xOff, h / 4f),
+                _ => new(w / 2f - xOff, h / 2f)
+            };
         }
-    }
 
-
-    public class Hex
-    {
-        public readonly Vector2Int mapPosition;
-        public readonly GameObject landMesh;
-        public readonly GameObject waterMesh;
-
-        public Hex(Vector2Int mapPosition,
-            GameObject landMesh, GameObject waterMesh)
+        // Distance of {x0,y0} from the line going through p,q
+        // Shamelessly stolen from StackOverflow
+        public static float DistanceToRiver(
+            float px, float py, float qx, float qy,
+            float x0, float y0)
         {
-            this.mapPosition = mapPosition;
-            this.landMesh = landMesh;
-            this.waterMesh = waterMesh;
+            float A = x0 - px;
+            float B = y0 - py;
+            float C = qx - px;
+            float D = qy - py;
+
+            float dot = A * C + B * D;
+            float len_sq = C * C + D * D;
+            float param = -1;
+            if (len_sq != 0) param = dot / len_sq;
+
+            float xx, yy;
+
+            if (param < 0) { xx = px; yy = py; }
+            else if (param > 1) { xx = qx; yy = qy; }
+            else { xx = px + param * C; yy = py + param * D; }
+
+            float dx = x0 - xx;
+            float dy = y0 - yy;
+            return (float)Math.Sqrt(dx * dx + dy * dy);
         }
     }
 
