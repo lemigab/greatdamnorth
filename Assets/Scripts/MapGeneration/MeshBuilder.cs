@@ -7,10 +7,12 @@ using UnityEngine;
 public class MeshBuilder : MonoBehaviour
 {
 
-    public MeshFilter meshFilter;
-    public MeshCollider meshCollider;
+    public MeshFilter landFilter;
+    public MeshFilter waterFilter;
+    public MeshCollider landCollider;
+    public MeshCollider waterCollider;
 
-    public int resolution, seed;
+    public int resolution, scale, seed;
 
     public bool lowPoly, forceEdge;
 
@@ -24,18 +26,23 @@ public class MeshBuilder : MonoBehaviour
     public void Generate()
     {
         resolution = 1 + resolution - (resolution % 2);
-        float[,] flts = NoiseMap.Export(resolution, seed,
+        float[,] l = NoiseMap.Export(resolution, seed,
             hillHeight, hillDensity, FbOctaveCount, 0.05f, FbOctaveDamping);
+        float[,] w = NoiseMap.Export(resolution, 0, 0, 0f, 1, 0f, 0f);
 
-        ApplyMesh(CreateFromNoiseGrid(
-            flts, 256f / resolution, lowPoly, forceEdge));
+        ApplyMeshes(
+            CreateFromNoiseGrid(l, scale, lowPoly, forceEdge),
+            CreateFromNoiseGrid(w, scale, lowPoly, false)
+        );
     }
 
 
-    private void ApplyMesh(Mesh mesh)
+    private void ApplyMeshes(Mesh land, Mesh water)
     {
-        meshFilter.mesh = mesh;
-        meshCollider.sharedMesh = mesh;
+        landFilter.mesh = land;
+        waterFilter.mesh = water;
+        landCollider.sharedMesh = land;
+        waterCollider.sharedMesh = water;
     }
 
 
@@ -75,8 +82,8 @@ public class MeshBuilder : MonoBehaviour
                 // ease towards max height near border
                 tempVerts.Add(new Vector3(
                     unitSize * ((-0.5f * offX) + pt),
-                    (forceEdge ? HexEdgeLerp(grid[row, pt], distToEdge) 
-                    : grid[row, pt]) - hillHeight,
+                    unitSize * ((forceEdge ? HexEdgeLerp(grid[row, pt], distToEdge)
+                    : grid[row, pt]) - hillHeight),
                     unitSize * offZ
                 ));
                 // track which list element matches the grid location
