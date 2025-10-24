@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
+using WorldUtil;
 using Random = System.Random;
 
 public class WorldBuilder : MonoBehaviour
@@ -11,15 +12,19 @@ public class WorldBuilder : MonoBehaviour
     public GameObject originWaterHex;
 
     public int mapSize; // longest diameter
-    public bool isTri;
+    public Constructs.Construct construct;
 
-    private List<GameObject> _created = new();
+    private readonly List<GameObject> _created = new();
 
 
     [ContextMenu("Construct Map")]
     public void ConstructMap()
     {
+        // Clean up previous map
         Clear();
+        // Initialize collection of hex objects
+        Dictionary<Vector2Int, Hex> hexes = new();
+        // Get hex mesh geometry
         Random rng = new(originMeshBuilder.seed);
         int originalSeed = originMeshBuilder.seed;
         float landY = originLandHex.transform.position.y;
@@ -29,17 +34,21 @@ public class WorldBuilder : MonoBehaviour
         float sq3 = (float)Math.Sqrt(3f);
         Vector2 hexOff = new(hexW * 0.75f, hexW * 0.25f * sq3);
         Vector2 rowOrg = new(0f, 0f);
-        if (!isTri && mapSize % 2 == 0) mapSize--;
+        if (mapSize % 2 == 0) mapSize--;
+        // instantiate and place all map tiles
         for (int i = 0; i < mapSize; i++)
         {
-            int rowLen = isTri
-                ? mapSize - i
-                : mapSize - Math.Abs(i - (mapSize / 2));
+            int rowLen = mapSize - Math.Abs(i - (mapSize / 2));
             for (int j = 0; j < rowLen; j++)
             {
                 if (i == 0 && j == 0) continue;
+                int trueJ = j > mapSize / 2 ? j + (i - (mapSize / 2)) : j;
+                Vector2Int truePos = new(i, trueJ);
                 originMeshBuilder.seed = rng.Next(999999);
-                originMeshBuilder.Generate();
+                originMeshBuilder.GenerateWithRiverNodes(
+                    Constructs.UpstreamSideOf(truePos, mapSize, construct),
+                    Constructs.DownstreamSideOf(truePos, mapSize, construct)
+                );
                 GameObject newLandHex = Instantiate(originLandHex);
                 GameObject newWaterHex = Instantiate(originWaterHex);
                 Vector2 pos = new Vector3(
@@ -50,11 +59,33 @@ public class WorldBuilder : MonoBehaviour
                 newWaterHex.transform.position = new(pos.x, waterY, pos.y);
                 _created.Add(newLandHex);
                 _created.Add(newWaterHex);
+                hexes.Add(truePos, new(truePos, newLandHex, newWaterHex));
             }
-            rowOrg.x += !isTri && (i < mapSize / 2) ? -hexOff.x : 0f;
-            rowOrg.y += !isTri && (i < mapSize / 2) ? hexOff.y : 2f * hexOff.y;
+            rowOrg.x += (i < mapSize / 2) ? -hexOff.x : 0;
+            rowOrg.y += (i < mapSize / 2) ? hexOff.y : 2f * hexOff.y;
         }
+        // reset the seed
         originMeshBuilder.seed = originalSeed;
+        // build game world
+        List<List<Hex>> wRivers = new();
+        List<Tuple<Hex, Hex>> wRoads = new();
+        foreach (Vector2Int[] river in Constructs.RiverSets(construct))
+        {
+            List<Hex> hs = new();
+            foreach (Vector2Int v in river)
+            {
+                hs.Add(hexes[v]);
+            }
+            wRivers.Add(hs);
+        }
+        foreach (Vector2Int[] road in Constructs.RoadSets(construct))
+        {
+            Tuple<Hex, Hex> hs = new(hexes[road[0]], hexes[road[1]]);
+            wRoads.Add(hs);
+        }
+        GameWorld.Instance().AddWorld(new(wRivers, wRoads));
+        Debug.Log("Made a world with " + wRivers.Count + " rivers and " 
+            + wRoads.Count + " roads");
     }
 
 
@@ -64,4 +95,5 @@ public class WorldBuilder : MonoBehaviour
         foreach (GameObject o in _created) DestroyImmediate(o);
         _created.Clear();
     }
+
 }

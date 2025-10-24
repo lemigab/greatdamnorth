@@ -9,7 +9,8 @@ namespace WorldUtil
     {
         public enum Construct
         {
-            HEX7_RIVER6 // 7-size hexagon with 6 rivers
+            HEX7_EMPTY, // 7-size hexagon with no rivers/roads
+            HEX7_RIVER6 // 7-size hexagon with 6 rivers and 12 roads
         }
 
         private static Vector2Int[] VecsOf(params int[] vals)
@@ -21,6 +22,9 @@ namespace WorldUtil
             }
             return vecs;
         }
+
+        private readonly static Vector2Int[][] HEX7_EMPTY_RIVERS = { };
+        private readonly static Vector2Int[][] HEX7_EMPTY_ROADS = { };
 
         private readonly static Vector2Int[][] HEX7_RIVER6_RIVERS =
         {
@@ -37,7 +41,6 @@ namespace WorldUtil
             // River 5
             VecsOf(3, 0, 4, 1, 3, 1, 3, 2, 2, 1, 2, 0)
         };
-
         private readonly static Vector2Int[][] HEX7_RIVER6_ROADS =
         {
             // Roads from R0-1
@@ -57,6 +60,7 @@ namespace WorldUtil
         public static Vector2Int[][] RiverSets(Construct constr)
         => constr switch
         {
+            Construct.HEX7_EMPTY => HEX7_EMPTY_RIVERS,
             Construct.HEX7_RIVER6 => HEX7_RIVER6_RIVERS,
             _ => throw new NotImplementedException()
         };
@@ -64,21 +68,101 @@ namespace WorldUtil
         public static Vector2Int[][] RoadSets(Construct constr)
         => constr switch
         {
+            Construct.HEX7_EMPTY => HEX7_EMPTY_ROADS,
             Construct.HEX7_RIVER6 => HEX7_RIVER6_ROADS,
             _ => throw new NotImplementedException()
         };
+
+        public static HexSide DownstreamSideOf(
+            Vector2Int srcPos, int mapSize, Construct constr)
+        {
+            foreach (Vector2Int[] river in RiverSets(constr))
+                for (int i = 0; i < river.Length; i++)
+                {
+                    if (river[i].Equals(srcPos))
+                    {
+                        if (i == mapSize - 1) 
+                            return OutgoingEdge(srcPos, mapSize);
+                        return EdgeFrom(srcPos, river[i + 1]);
+                    }
+                }
+            throw new Exception("Position not on any river");
+        }
+
+        public static HexSide UpstreamSideOf(
+            Vector2Int srcPos, int mapSize, Construct constr)
+        {
+            foreach (Vector2Int[] river in RiverSets(constr))
+                for (int i = 0; i < river.Length; i++)
+                {
+                    if (river[i].Equals(srcPos))
+                    {
+                        if (i == 0) return OutgoingEdge(srcPos, mapSize);
+                        return EdgeFrom(srcPos, river[i - 1]);
+                    }
+                }
+            throw new Exception("Position not on any river");
+        }
+
+        private static HexSide OutgoingEdge(Vector2Int srcPos, int mapSize)
+        {
+            int x = srcPos.x;
+            int y = srcPos.y;
+            int n = mapSize - 1;
+            if (x == 0 || y == 0)
+            {
+                if (x == 0 && y == 0) return HexSide.S;
+                if (x == 0) return HexSide.SE;
+                if (y == 0) return HexSide.SW;
+            }
+            else
+            {
+                if (x == n && y == n) return HexSide.N;
+                if (x == n) return HexSide.NW;
+                if (y == n) return HexSide.NE;
+            }
+            throw new Exception("No outgoing edges");
+        }
+
+        private static HexSide EdgeFrom(Vector2Int src, Vector2Int dst)
+        {
+            int dx = dst.x - src.x;
+            int dy = dst.y - src.y;
+            if (dx == dy)
+            {
+                if (dx > 0) return HexSide.N;
+                if (dx < 0) return HexSide.S;
+            }
+            else if (dx == 0)
+            {
+                if (dy > 0) return HexSide.NE;
+                if (dy < 0) return HexSide.SW;
+            }
+            else if (dy == 0)
+            {
+                if (dx > 0) return HexSide.NW;
+                if (dx < 0) return HexSide.SE;
+            }
+            throw new Exception("No hex side direction between src and dest");
+        }
+
     }
 
 
     public class World
     {
-        public readonly Hex[][] rivers;
-        public readonly Hex[][] roads;
+        // A list of rivers, which are themselves lists of hexes
+        // Hexes are ordered from start to end within a river
+        public readonly List<List<Hex>> Rivers;
 
-        public World(Hex[][] rivers, Hex[][] roads)
+        // A list of roads, which are themselves tuples of two hexes
+        // Order of the tuple is arbitrary since roads are bidirectional
+        public readonly List<Tuple<Hex, Hex>> Roads;
+
+        public World(List<List<Hex>> rivers, List<Tuple<Hex, Hex>> roads)
         {
-            this.rivers = rivers;
-            this.roads = roads;
+            Rivers = rivers;
+            Roads = roads;
         }
     }
 
@@ -96,6 +180,20 @@ namespace WorldUtil
             this.landMesh = landMesh;
             this.waterMesh = waterMesh;
         }
+    }
+
+
+    public enum HexSide
+    {
+        // The negative of a direction is its opposite
+        // i.e. negative north is south 
+        N = 1,
+        NW = 2,
+        NE = 3,
+        S = -1,
+        SE = -2,
+        SW = -3,
+        NULL = 0
     }
 
 }
