@@ -53,13 +53,15 @@ namespace WorldUtil
         public readonly Vector2Int mapPosition;
         public readonly GameObject landMesh;
         public readonly GameObject waterMesh;
+        public readonly BeaverDam exitDam;
 
         public Hex(Vector2Int mapPosition,
-            GameObject landMesh, GameObject waterMesh)
+            GameObject landMesh, GameObject waterMesh, BeaverDam exitDam)
         {
             this.mapPosition = mapPosition;
             this.landMesh = landMesh;
             this.waterMesh = waterMesh;
+            this.exitDam = exitDam;
         }
     }
 
@@ -216,6 +218,7 @@ namespace WorldUtil
     {
         // Equivalent hex mesh positions of a river node
         // width is the true (in-game) dimension between two opposite corners
+        // output vector has (0,0) in the bottom-left corner vertex of the hex
         public static Vector2 EquivHexPos(HexSide side, float width)
         {
             float w = width;

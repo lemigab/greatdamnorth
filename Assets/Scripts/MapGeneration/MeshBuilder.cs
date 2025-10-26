@@ -69,14 +69,13 @@ public class MeshBuilder : MonoBehaviour
         if (grid.GetLength(0) != grid.GetLength(1)
             || grid.GetLength(0) % 2 == 0)
             throw new Exception("Invalid input grid!");
-        if ((riverIn == HexSide.NULL && riverOut != HexSide.NULL)
-            || (riverIn != HexSide.NULL && riverOut == HexSide.NULL))
-            throw new Exception("Invalid river setup!");
 
         // River options
         int n = grid.GetLength(0);
         float trueWidth = (resolution - 1) * scale;
-        bool hasRiver = riverIn != HexSide.NULL;
+        bool hasRiverIn = riverIn != HexSide.NULL;
+        bool hasRiverOut  = riverOut != HexSide.NULL;
+        bool hasRiver = hasRiverIn || hasRiverOut;
         bool mount = forceEdge && !hasRiver;
         Vector2 rInPos = Geometry.EquivHexPos(riverIn, trueWidth);
         Vector2 rOutPos = Geometry.EquivHexPos(riverOut, trueWidth);
@@ -103,7 +102,7 @@ public class MeshBuilder : MonoBehaviour
                 // terrain height adjusted to border/river bias
                 float biasedAlt = grid[row, pt];
                 // tiles without rivers are hills
-                if (mount) biasedAlt += 10f;
+                if (mount) biasedAlt *= 4f;
                 // distance to border
                 int distToEdge = Math.Min(
                     Math.Min(pt, rowLen - 1 - pt),
