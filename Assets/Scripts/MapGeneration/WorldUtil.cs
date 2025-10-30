@@ -3,41 +3,57 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UIElements;
+using static WorldUtil.Constructs;
 
 namespace WorldUtil
 {
 
     public class World
     {
+        // An unordered list of all hexes in the world
+        public readonly List<Hex> all;
+
         // A list of rivers, which are themselves lists of hexes
         // Hexes are ordered from start to end within a river
-        public readonly List<List<Hex>> Rivers;
+        public readonly List<List<Hex>> rivers;
 
         // A list of roads, which are themselves tuples of two hexes
         // Order of the tuple is arbitrary since roads are bidirectional
-        public readonly List<Tuple<Hex, Hex>> Roads;
+        public readonly List<Tuple<Hex, Hex>> roads;
 
-        public World(List<List<Hex>> rivers, List<Tuple<Hex, Hex>> roads)
+        public World(List<Hex> all, List<List<Hex>> rivers,
+            List<Tuple<Hex, Hex>> roads)
         {
-            Rivers = rivers;
-            Roads = roads;
+            this.all = all;
+            this.rivers = rivers;
+            this.roads = roads;
+        }
+
+        public Hex FindHexWithDam(BeaverDam dam)
+        {
+            foreach (Hex h in all) if (h.exitDam == dam) return h;
+            throw new Exception("Dam not found in world");
         }
 
         public List<Hex> FindRiverWithHex(Hex hex)
         {
-            foreach (List<Hex> river in Rivers)
+            foreach (List<Hex> river in rivers)
                 if (river.Contains(hex)) return river;
             throw new Exception("Hex not along any river");
         }
 
+        // Hexes are ordered inverse to river direction
         public List<Hex> UpstreamFrom(Hex target)
         {
             List<Hex> r = FindRiverWithHex(target);
             int hPos = r.IndexOf(target);
             if (hPos == 0) return new();
-            return r.GetRange(0, hPos);
+            r = r.GetRange(0, hPos);
+            r.Reverse();
+            return r;
         }
 
+        // Hexes are ordered according to river direction
         public List<Hex> DownstreamFrom(Hex target)
         {
             List<Hex> r = FindRiverWithHex(target);
@@ -55,6 +71,8 @@ namespace WorldUtil
         public readonly GameObject waterMesh;
         public readonly BeaverDam exitDam;
 
+        private int _waterLevel = 0;
+
         public Hex(Vector2Int mapPosition,
             GameObject landMesh, GameObject waterMesh, BeaverDam exitDam)
         {
@@ -62,6 +80,17 @@ namespace WorldUtil
             this.landMesh = landMesh;
             this.waterMesh = waterMesh;
             this.exitDam = exitDam;
+        }
+
+        public bool HasDam() => exitDam != null;
+
+        public int WaterLevel() => _waterLevel;
+
+        public bool SetWaterLevel(int level)
+        {
+            if (level > BeaverDam.MAX_LVL) return false;
+            if (level < 0) return false;
+            else _waterLevel = level; return true;
         }
     }
 
@@ -71,7 +100,8 @@ namespace WorldUtil
         public enum Construct
         {
             HEX7_EMPTY, // 7-size hexagon with no rivers/roads
-            HEX7_RIVER6 // 7-size hexagon with 6 rivers and 12 roads
+            HEX7_RIVER6, // 7-size hexagon with 6 rivers and 12 roads
+            HEX9_RIVER6 // 9-size hexagon with outer mountains
         }
 
         private static Vector2Int[] VecsOf(params int[] vals)
@@ -118,11 +148,43 @@ namespace WorldUtil
             VecsOf(2, 0, 1, 0), VecsOf(3, 2, 2, 2),
         };
 
+        private readonly static Vector2Int[][] HEX9_RIVER6_RIVERS =
+        {
+            // River 0
+            VecsOf(0, 0, 1, 1, 2, 1, 2, 2, 3, 3, 2, 3, 1, 2, 0, 1), 
+            // River 1
+            VecsOf(0, 4, 1, 4, 1, 3, 2, 4, 3, 4, 3, 5, 2, 5, 1, 5),
+            // River 2
+            VecsOf(4, 8, 4, 7, 3, 6, 4, 6, 4, 5, 5, 6, 5, 7, 5, 8),
+            // River 3
+            VecsOf(8, 8, 7, 7, 6, 7, 6, 6, 5, 5, 6, 5, 7, 6, 8, 7),
+            // River 4
+            VecsOf(8, 4, 7, 4, 7, 5, 6, 4, 5, 4, 5, 3, 6, 3, 7, 3),
+            // River 5
+            VecsOf(4, 0, 4, 1, 5, 2, 4, 2, 4, 3, 3, 2, 3, 1, 3, 0)
+        };
+        private readonly static Vector2Int[][] HEX9_RIVER6_ROADS =
+        {
+            // Roads from R0-1
+            VecsOf(1, 2, 1, 3), VecsOf(3, 3, 3, 4),
+            // Roads from R1-2
+            VecsOf(2, 5, 3, 6), VecsOf(3, 4, 4, 5),
+            // Roads from R2-3
+            VecsOf(5, 7, 6, 7), VecsOf(4, 5, 5, 5),
+            // Roads from R3-4
+            VecsOf(7, 6, 7, 5), VecsOf(5, 5, 5, 4),
+            // Roads from R4-5
+            VecsOf(6, 3, 5, 2), VecsOf(5, 4, 4, 3),
+            // Roads from R5-0
+            VecsOf(3, 1, 2, 1), VecsOf(4, 3, 3, 3),
+        };
+
         public static Vector2Int[][] RiverSets(Construct constr)
         => constr switch
         {
             Construct.HEX7_EMPTY => HEX7_EMPTY_RIVERS,
             Construct.HEX7_RIVER6 => HEX7_RIVER6_RIVERS,
+            Construct.HEX9_RIVER6 => HEX9_RIVER6_RIVERS,
             _ => throw new NotImplementedException()
         };
 
@@ -131,8 +193,72 @@ namespace WorldUtil
         {
             Construct.HEX7_EMPTY => HEX7_EMPTY_ROADS,
             Construct.HEX7_RIVER6 => HEX7_RIVER6_ROADS,
+            Construct.HEX9_RIVER6 => HEX9_RIVER6_ROADS,
             _ => throw new NotImplementedException()
         };
+    }
+
+
+    public static class Geometry
+    {
+        // Equivalent hex mesh positions of a river node
+        // width is the true (in-game) dimension between two opposite corners
+        // output vector has (0,0) in the bottom-left corner vertex of the hex
+        public static Vector2 EquivHexPos(HexSide side, float width)
+        {
+            float w = width;
+            float w8 = w / 8f;
+            float sq3 = (float)Math.Sqrt(3.0f);
+            float h = sq3 * w / 2f;
+            float xOff = w / 4f;
+            return side switch
+            {
+                HexSide.N => new(w / 2f - xOff, h),
+                HexSide.NW => new(w8 - xOff, h / 4f * 3f),
+                HexSide.NE => new(w - w8 - xOff, h / 4f * 3f),
+                HexSide.S => new(w / 2f - xOff, 0f),
+                HexSide.SE => new(w - w8 - xOff, h / 4f),
+                HexSide.SW => new(w8 - xOff, h / 4f),
+                _ => new(w / 2f - xOff, h / 2f)
+            };
+        }
+
+        // Distance of {x0,y0} from the line going through p,q
+        // Shamelessly stolen from StackOverflow
+        public static float DistanceToRiver(
+            float px, float py, float qx, float qy,
+            float x0, float y0)
+        {
+            float A = x0 - px;
+            float B = y0 - py;
+            float C = qx - px;
+            float D = qy - py;
+
+            float dot = A * C + B * D;
+            float len_sq = C * C + D * D;
+            float param = -1;
+            if (len_sq != 0) param = dot / len_sq;
+
+            float xx, yy;
+
+            if (param < 0) { xx = px; yy = py; }
+            else if (param > 1) { xx = qx; yy = qy; }
+            else { xx = px + param * C; yy = py + param * D; }
+
+            float dx = x0 - xx;
+            float dy = y0 - yy;
+            return (float)Math.Sqrt(dx * dx + dy * dy);
+        }
+
+        public static float AngleToAlign(HexSide side)
+        {
+            return side switch
+            {
+                HexSide.NW or HexSide.SE => 120f,
+                HexSide.NE or HexSide.SW => 60f,
+                _ => 0f
+            };
+        }
 
         public static HexSide DownstreamSideOf(
             Vector2Int srcPos, int mapSize, Construct constr)
@@ -210,59 +336,6 @@ namespace WorldUtil
                 if (dx < 0) return HexSide.SE;
             }
             throw new Exception("No hex side direction between src and dest");
-        }
-    }
-
-
-    public static class Geometry
-    {
-        // Equivalent hex mesh positions of a river node
-        // width is the true (in-game) dimension between two opposite corners
-        // output vector has (0,0) in the bottom-left corner vertex of the hex
-        public static Vector2 EquivHexPos(HexSide side, float width)
-        {
-            float w = width;
-            float w8 = w / 8f;
-            float sq3 = (float)Math.Sqrt(3.0f);
-            float h = sq3 * w / 2f;
-            float xOff = w / 4f;
-            return side switch
-            {
-                HexSide.N => new(w / 2f - xOff, h),
-                HexSide.NW => new(w8 - xOff, h / 4f * 3f),
-                HexSide.NE => new(w - w8 - xOff, h / 4f * 3f),
-                HexSide.S => new(w / 2f - xOff, 0f),
-                HexSide.SE => new(w - w8 - xOff, h / 4f),
-                HexSide.SW => new(w8 - xOff, h / 4f),
-                _ => new(w / 2f - xOff, h / 2f)
-            };
-        }
-
-        // Distance of {x0,y0} from the line going through p,q
-        // Shamelessly stolen from StackOverflow
-        public static float DistanceToRiver(
-            float px, float py, float qx, float qy,
-            float x0, float y0)
-        {
-            float A = x0 - px;
-            float B = y0 - py;
-            float C = qx - px;
-            float D = qy - py;
-
-            float dot = A * C + B * D;
-            float len_sq = C * C + D * D;
-            float param = -1;
-            if (len_sq != 0) param = dot / len_sq;
-
-            float xx, yy;
-
-            if (param < 0) { xx = px; yy = py; }
-            else if (param > 1) { xx = qx; yy = qy; }
-            else { xx = px + param * C; yy = py + param * D; }
-
-            float dx = x0 - xx;
-            float dy = y0 - yy;
-            return (float)Math.Sqrt(dx * dx + dy * dy);
         }
     }
 
