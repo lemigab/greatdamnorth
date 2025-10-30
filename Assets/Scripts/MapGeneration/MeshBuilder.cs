@@ -12,6 +12,9 @@ public class MeshBuilder : MonoBehaviour
     public MeshFilter waterFilter;
     public MeshCollider landCollider;
     public MeshCollider waterCollider;
+    public MeshRenderer landRenderer;
+
+    public Material flatLand, mountainLand;
 
     public int resolution, scale, seed;
 
@@ -26,30 +29,34 @@ public class MeshBuilder : MonoBehaviour
 
 
     [ContextMenu("Generate")]
-    public void Generate()
-        => GenerateWithRiverNodes(HexSide.NULL, HexSide.NULL);
+    public Mesh Generate()
+        => GenerateWithFeatures(HexSide.N, HexSide.SE);
 
 
-    public void GenerateWithRiverNodes(HexSide side1, HexSide side2)
+    public Mesh GenerateWithFeatures(HexSide river1, HexSide river2)
     {
         resolution = 1 + resolution - (resolution % 2);
         float[,] l = NoiseMap.Export(resolution, seed,
             hillHeight, hillDensity, FbOctaveCount, 0.05f, FbOctaveDamping);
         float[,] w = NoiseMap.Export(resolution, 0, 0, 0f, 1, 0f, 0f);
 
-        ApplyMeshes(
-            CreateFromNoiseGrid(l, scale, lowPoly, forceHills, side1, side2),
-            CreateFromNoiseGrid(w, scale, lowPoly, false)
-        );
+        Mesh lMesh = CreateFromNoiseGrid(
+            l, scale, lowPoly, forceHills, river1, river2);
+        Mesh wMesh = CreateFromNoiseGrid(
+            w, scale, lowPoly, false);
+
+        ApplyMeshes(lMesh, wMesh, DetermineLandMaterial(river1, river2));
+        return lMesh;
     }
 
 
-    private void ApplyMeshes(Mesh land, Mesh water)
+    private void ApplyMeshes(Mesh land, Mesh water, Material landMat)
     {
         landFilter.mesh = land;
         waterFilter.mesh = water;
         landCollider.sharedMesh = land;
         waterCollider.sharedMesh = water;
+        landRenderer.material = landMat;
     }
 
 
@@ -74,13 +81,12 @@ public class MeshBuilder : MonoBehaviour
         int n = grid.GetLength(0);
         float trueWidth = (resolution - 1) * scale;
         bool hasRiverIn = riverIn != HexSide.NULL;
-        bool hasRiverOut  = riverOut != HexSide.NULL;
+        bool hasRiverOut = riverOut != HexSide.NULL;
         bool hasRiver = hasRiverIn || hasRiverOut;
         bool mount = forceEdge && !hasRiver;
         Vector2 rInPos = Geometry.EquivHexPos(riverIn, trueWidth);
         Vector2 rOutPos = Geometry.EquivHexPos(riverOut, trueWidth);
         Vector2 cntPos = Geometry.EquivHexPos(HexSide.NULL, trueWidth);
-        System.Random rng = new();
 
         // Build verts
         int fn = n / 2; // floor division
@@ -192,6 +198,15 @@ public class MeshBuilder : MonoBehaviour
         };
         mesh.RecalculateNormals();
         return mesh;
+    }
+
+
+    private Material DetermineLandMaterial(HexSide riverIn, HexSide riverOut)
+    {
+        return
+            (riverIn == HexSide.NULL && riverOut == HexSide.NULL)
+            ? mountainLand
+            : flatLand;
     }
 
 

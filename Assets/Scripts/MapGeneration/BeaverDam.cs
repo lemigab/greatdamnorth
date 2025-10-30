@@ -4,11 +4,16 @@ using WorldUtil;
 public class BeaverDam : MonoBehaviour
 {
 
-    private int _lvl = 1; // later make this 0
+    private int _lvl = 0;
 
     public const int MAX_LVL = 4; // arbitrary for now
 
+    public const float LVL_MULT = 1f;
+
     public int Level() => _lvl;
+
+    private void SetScale() =>
+        gameObject.transform.localScale = new(6f, 0.2f + LVL_MULT * _lvl, 2f);
 
 
     // Try to build one more level
@@ -17,8 +22,7 @@ public class BeaverDam : MonoBehaviour
     public bool Increment()
     {
         if (_lvl == MAX_LVL) return false;
-        _lvl++;
-        gameObject.transform.localScale = new(_lvl, _lvl, _lvl);
+        _lvl++; SetScale(); SetWaterHexes();
         return true;
     }
 
@@ -28,9 +32,35 @@ public class BeaverDam : MonoBehaviour
     public bool Decrement()
     {
         if (_lvl == 0) return false;
-        _lvl--;
-        gameObject.transform.localScale = new(_lvl, _lvl, _lvl);
+        _lvl--; SetScale(); SetWaterHexes();
         return true;
     }
 
+
+    // Try to flood/dry upstream water hexes to this dam's new level
+    // If a larger dam exists UPSTREAM, stop at it
+    // If a larger dam exists DOWNSTREAM, do not move any water
+    private void SetWaterHexes()
+    {
+        float dL = GameWorld.Instance().DefaultWaterHeight();
+        World w = GameWorld.Instance().World();
+        Hex at = w.FindHexWithDam(this);
+        // see if a downstream dam is larger
+        foreach (Hex h in w.DownstreamFrom(at))
+            if (h.exitDam.Level() > _lvl) return;
+        // set home hex
+        at.SetWaterLevel(_lvl);
+        Vector3 v = at.waterMesh.transform.position;
+        at.waterMesh.transform.position =
+            new(v.x, dL + _lvl * (LVL_MULT / 2f), v.z);
+        // set upstream hexes
+        foreach (Hex h in w.UpstreamFrom(at))
+        {
+            if (h.exitDam.Level() > _lvl) break;
+            h.SetWaterLevel(_lvl);
+            v = h.waterMesh.transform.position;
+            h.waterMesh.transform.position =
+                new(v.x, dL + _lvl * (LVL_MULT / 2f), v.z);
+        }
+    }
 }
