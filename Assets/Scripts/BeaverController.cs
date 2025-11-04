@@ -84,8 +84,8 @@ public class BeaverController : MonoBehaviour
     {
         transform.position += targetDirection * (moveSpeed * Time.deltaTime);
 
-        var rotationDirection = Quaternion.Euler(-90, 0, 0) * targetDirection;
-        var rotation = Quaternion.LookRotation(targetDirection) * Quaternion.Euler(-90, 0, 0);
+        var rotationDirection = targetDirection;
+        var rotation = Quaternion.LookRotation(targetDirection);
         transform.rotation = Quaternion.Lerp(transform.rotation, rotation, rotationSpeed * Time.deltaTime);
     }
 
