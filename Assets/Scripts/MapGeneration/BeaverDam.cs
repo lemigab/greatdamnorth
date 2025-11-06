@@ -6,9 +6,9 @@ public class BeaverDam : MonoBehaviour
 
     private int _lvl = 0;
 
-    public const int MAX_LVL = 4; // arbitrary for now
+    public const int MAX_LVL = 2; // arbitrary for now
 
-    public const float LVL_MULT = 1f;
+    public const float LVL_MULT = 2f;
 
     public int Level() => _lvl;
 

@@ -13,11 +13,18 @@ public class WorldBuilder : MonoBehaviour
     public GameObject originLandHex;
     public GameObject originWaterHex;
     public BeaverDam originDam;
+    public GameObject originLog;
     public GameObject treeContainer;
 
     public int mapSize; // longest diameter
     public float waterHeight;
     public C.Construct construct;
+
+
+    private void Start()
+    {
+        ConstructMap();
+    }
 
 
     [ContextMenu("Construct Map")]
@@ -53,7 +60,8 @@ public class WorldBuilder : MonoBehaviour
                 originMeshBuilder.seed = rng.Next(999999);
                 HexSide uS = G.UpstreamSideOf(truePos, mapSize, construct);
                 HexSide dS = G.DownstreamSideOf(truePos, mapSize, construct);
-                Mesh lM = originMeshBuilder.GenerateWithFeatures(uS, dS);
+                HexSide[] r = G.RoadSidesOf(truePos, construct);
+                Mesh lM = originMeshBuilder.GenerateWithFeatures(uS, dS, r);
                 // copy the reference hex
                 GameObject newLandHex = Instantiate(originLandHex, transform);
                 GameObject newWaterHex = Instantiate(originWaterHex, transform);
@@ -61,6 +69,10 @@ public class WorldBuilder : MonoBehaviour
                 bool mount = uS == HexSide.NULL && dS == HexSide.NULL;
                 if (!mount)
                 {
+                    // chewable log (temporary for A3)
+                    GameObject log = Instantiate(originLog, newLandHex.transform);
+                    log.name = "Log";
+                    // border trees
                     List<Vector3> placedTrees = new();
                     foreach (Vector3 v in lM.vertices)
                     {

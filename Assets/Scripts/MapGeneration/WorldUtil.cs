@@ -99,7 +99,7 @@ namespace WorldUtil
     {
         public enum Construct
         {
-            HEX7_EMPTY, // 7-size hexagon with no rivers/roads
+            EMPTY, // 7-size hexagon with no rivers/roads
             HEX7_RIVER6, // 7-size hexagon with 6 rivers and 12 roads
             HEX9_RIVER6 // 9-size hexagon with outer mountains
         }
@@ -114,8 +114,8 @@ namespace WorldUtil
             return vecs;
         }
 
-        private readonly static Vector2Int[][] HEX7_EMPTY_RIVERS = { };
-        private readonly static Vector2Int[][] HEX7_EMPTY_ROADS = { };
+        private readonly static Vector2Int[][] EMPTY_RIVERS = { };
+        private readonly static Vector2Int[][] EMPTY_ROADS = { };
 
         private readonly static Vector2Int[][] HEX7_RIVER6_RIVERS =
         {
@@ -182,7 +182,7 @@ namespace WorldUtil
         public static Vector2Int[][] RiverSets(Construct constr)
         => constr switch
         {
-            Construct.HEX7_EMPTY => HEX7_EMPTY_RIVERS,
+            Construct.EMPTY => EMPTY_RIVERS,
             Construct.HEX7_RIVER6 => HEX7_RIVER6_RIVERS,
             Construct.HEX9_RIVER6 => HEX9_RIVER6_RIVERS,
             _ => throw new NotImplementedException()
@@ -191,7 +191,7 @@ namespace WorldUtil
         public static Vector2Int[][] RoadSets(Construct constr)
         => constr switch
         {
-            Construct.HEX7_EMPTY => HEX7_EMPTY_ROADS,
+            Construct.EMPTY => EMPTY_ROADS,
             Construct.HEX7_RIVER6 => HEX7_RIVER6_ROADS,
             Construct.HEX9_RIVER6 => HEX9_RIVER6_ROADS,
             _ => throw new NotImplementedException()
@@ -225,7 +225,7 @@ namespace WorldUtil
 
         // Distance of {x0,y0} from the line going through p,q
         // Shamelessly stolen from StackOverflow
-        public static float DistanceToRiver(
+        public static float DistFromLine(
             float px, float py, float qx, float qy,
             float x0, float y0)
         {
@@ -250,6 +250,23 @@ namespace WorldUtil
             return (float)Math.Sqrt(dx * dx + dy * dy);
         }
 
+        // Distance of a point from any of a series of lines
+        // Each of these lines goes from an edge point to the center point
+        public static float DistFromAny(
+            Vector2 queryPoint, Vector2 center, params Vector2[] edges)
+        {
+            float[] lookup = new float[edges.Length];
+            for (int i = 0; i < edges.Length; i++)
+            {
+                lookup[i] = DistFromLine(
+                    center.x, center.y, edges[i].x, edges[i].y,
+                    queryPoint.x, queryPoint.y);
+            }
+            float min = lookup[0];
+            foreach (float f in lookup) if (f < min) min = f;
+            return min;
+        }
+
         public static float AngleToAlign(HexSide side)
         {
             return side switch
@@ -259,6 +276,9 @@ namespace WorldUtil
                 _ => 0f
             };
         }
+
+        public static float Lerp(float a, float b, float t)
+            => a + (b - a) * t;
 
         public static HexSide DownstreamSideOf(
             Vector2Int srcPos, int mapSize, Construct constr)
@@ -289,6 +309,20 @@ namespace WorldUtil
                     }
                 }
             return HexSide.NULL;
+        }
+
+        public static HexSide[] RoadSidesOf(
+            Vector2Int srcPos, Construct constr)
+        {
+            List<HexSide> all = new();
+            foreach (Vector2Int[] road in RoadSets(constr))
+            {
+                if (road[0].Equals(srcPos))
+                    all.Add(EdgeFrom(srcPos, road[1]));
+                else if (road[1].Equals(srcPos))
+                    all.Add(EdgeFrom(srcPos, road[0]));
+            }
+            return all.ToArray();
         }
 
         private static HexSide OutgoingEdge(Vector2Int srcPos, int mapSize)
