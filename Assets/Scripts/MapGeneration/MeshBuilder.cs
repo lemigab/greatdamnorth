@@ -2,8 +2,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
+using Unity.VisualScripting;
 using UnityEngine;
 using WorldUtil;
+using G = WorldUtil.Geometry;
 
 public class MeshBuilder : MonoBehaviour
 {
@@ -26,14 +28,16 @@ public class MeshBuilder : MonoBehaviour
     public float FbOctaveDamping = 0.5f;
     public float borderEasing = 0.1f;
     public float riverEasing = 10f;
+    public float pathWidth = 0.5f;
 
 
     [ContextMenu("Generate")]
     public Mesh Generate()
-        => GenerateWithFeatures(HexSide.N, HexSide.SE);
+        => GenerateWithFeatures(HexSide.N, HexSide.SE, HexSide.S);
 
 
-    public Mesh GenerateWithFeatures(HexSide river1, HexSide river2)
+    public Mesh GenerateWithFeatures(
+        HexSide river1, HexSide river2, params HexSide[] roads)
     {
         resolution = 1 + resolution - (resolution % 2);
         float[,] l = NoiseMap.Export(resolution, seed,
@@ -41,7 +45,7 @@ public class MeshBuilder : MonoBehaviour
         float[,] w = NoiseMap.Export(resolution, 0, 0, 0f, 1, 0f, 0f);
 
         Mesh lMesh = CreateFromNoiseGrid(
-            l, scale, lowPoly, forceHills, river1, river2);
+            l, scale, lowPoly, forceHills, river1, river2, roads);
         Mesh wMesh = CreateFromNoiseGrid(
             w, scale, lowPoly, false);
 
@@ -64,6 +68,7 @@ public class MeshBuilder : MonoBehaviour
     // - The borders of the hexagon will be at a standardized (high) height.
     // - The rivers of the hexagon will be at a standardized (low) height.
     // - Areas near borders/rivers will be biased towards their height.
+    // - Roads are areas with a unique material index; lines from centre->edge
     // Math for the hexagon midpoints: https://www.desmos.com/calculator/mc0lxgyfno 
     // Hexagon will be triangulated like in: https://i.sstatic.net/CGBYv.jpg
     // - Rows of the array are rows of the vertices in the above image.
@@ -71,7 +76,7 @@ public class MeshBuilder : MonoBehaviour
     // - i.e. a 5x5 array is a 5-row hexagon; ignore the last 2 of row 1.
     private Mesh CreateFromNoiseGrid(
         float[,] grid, float unitSize, bool lowPoly, bool forceEdge,
-        HexSide riverIn, HexSide riverOut)
+        HexSide riverIn, HexSide riverOut, HexSide[] roads)
     {
         if (grid.GetLength(0) != grid.GetLength(1)
             || grid.GetLength(0) % 2 == 0)
@@ -84,9 +89,16 @@ public class MeshBuilder : MonoBehaviour
         bool hasRiverOut = riverOut != HexSide.NULL;
         bool hasRiver = hasRiverIn || hasRiverOut;
         bool mount = forceEdge && !hasRiver;
-        Vector2 rInPos = Geometry.EquivHexPos(riverIn, trueWidth);
-        Vector2 rOutPos = Geometry.EquivHexPos(riverOut, trueWidth);
-        Vector2 cntPos = Geometry.EquivHexPos(HexSide.NULL, trueWidth);
+        Vector2 rInPos = G.EquivHexPos(riverIn, trueWidth);
+        Vector2 rOutPos = G.EquivHexPos(riverOut, trueWidth);
+        Vector2 cntPos = G.EquivHexPos(HexSide.NULL, trueWidth);
+
+        // Road vectors
+        System.Random rng = new(seed);
+        bool hasRoads = roads.Length > 0;
+        Vector2[] rPs = new Vector2[roads.Length];
+        for (int i = 0; i < roads.Length; i++)
+            rPs[i] = G.EquivHexPos(roads[i], trueWidth);
 
         // Build verts
         int fn = n / 2; // floor division
@@ -94,7 +106,8 @@ public class MeshBuilder : MonoBehaviour
         int topLen = n - fn; // ceil division
         List<Vector3> tempVerts = new();
         int vCount = 0;
-        int[,] tempRef = new int[n, n];
+        int[,] tempGridRef = new int[n, n];
+        bool[,] roadRef = new bool[n, n]; // true for (x,y) verts on a road
         for (int row = 0; row < n; row++)
         {
             int rowLen = n - Math.Abs(row - fn);
@@ -105,6 +118,7 @@ public class MeshBuilder : MonoBehaviour
                 // target true x,y coords
                 float vx = unitSize * ((-0.5f * offX) + pt);
                 float vy = unitSize * offY;
+                Vector2 v = new(vx, vy);
                 // terrain height adjusted to border/river bias
                 float biasedAlt = grid[row, pt];
                 // tiles without rivers are hills
@@ -118,23 +132,25 @@ public class MeshBuilder : MonoBehaviour
                 // distance to river 
                 if (hasRiver)
                 {
-                    float distToRiv = Math.Min(
-                        Geometry.DistanceToRiver(cntPos.x, cntPos.y,
-                        rOutPos.x, rOutPos.y, vx, vy),
-                        Geometry.DistanceToRiver(rInPos.x, rInPos.y,
-                        cntPos.x, cntPos.y, vx, vy)
-                        );
+                    float distToRiv = G.DistFromAny(v, cntPos, rOutPos, rInPos);
                     // border verts will be less biased to rivers
                     if ((distToEdge == 0 && distToRiv < n / 16f)
                         || (distToEdge != 0 && distToRiv < n / 8f))
                         biasedAlt = NearRiverLerp(
                             biasedAlt, distToRiv);
                 }
+                // save which vert positions are on a road
+                float pW = G.Lerp(pathWidth, 0f, distToEdge / (float)fn);
+                bool roadHere = hasRoads
+                    && G.DistFromAny(v, cntPos, rPs) <= pW
+                    && (float)rng.NextDouble() > (distToEdge / (float)fn);
+                roadRef[row, pt] = roadHere;
+                float roadOff = roadHere ? hillHeight * 0.01f : 0f;
                 // add to vertex list
-                float vh = unitSize * biasedAlt - hillHeight;
+                float vh = unitSize * biasedAlt - hillHeight + roadOff;
                 tempVerts.Add(new Vector3(vx, vh, vy));
                 // track which list element matches the grid location
-                tempRef[row, pt] = vCount++;
+                tempGridRef[row, pt] = vCount++;
             }
         }
 
@@ -145,7 +161,7 @@ public class MeshBuilder : MonoBehaviour
         List<Vector3> verts = new();
         for (int i = 0; i < 6; i++)
         {
-            gridRef[i] = (int[,])tempRef.Clone();
+            gridRef[i] = (int[,])tempGridRef.Clone();
             verts.AddRange(tempVerts);
         }
 
@@ -165,7 +181,8 @@ public class MeshBuilder : MonoBehaviour
         }
 
         // Build triangles
-        List<int> tris = new();
+        List<int> baseTris = new();
+        List<int> roadTris = new();
         for (int row = 0; row < n; row++)
         {
             int rowLen = n - Math.Abs(row - fn);
@@ -176,26 +193,38 @@ public class MeshBuilder : MonoBehaviour
                 // upward-tri with this point as the left vert 
                 if (row < n - 1)
                 {
-                    tris.Add(CollectVertex(row, pt));
-                    tris.Add(CollectVertex(row + 1, pt + offU));
-                    tris.Add(CollectVertex(row, pt + 1));
+                    // get correct submesh
+                    bool rOnAny = roadRef[row, pt]
+                        || roadRef[row + 1, pt + offU]
+                        || roadRef[row, pt + 1];
+                    List<int> t = rOnAny ? roadTris : baseTris;
+                    // find vertices of this face
+                    t.Add(CollectVertex(row, pt));
+                    t.Add(CollectVertex(row + 1, pt + offU));
+                    t.Add(CollectVertex(row, pt + 1));
                 }
                 // downward-tri with this point as the left vert 
                 if (row > 0)
                 {
-                    tris.Add(CollectVertex(row, pt));
-                    tris.Add(CollectVertex(row, pt + 1));
-                    tris.Add(CollectVertex(row - 1, pt + offD));
+                    // get correct submesh
+                    bool rOnAny = roadRef[row, pt]
+                        || roadRef[row, pt + 1]
+                        || roadRef[row - 1, pt + offD];
+                    List<int> t = rOnAny ? roadTris : baseTris;
+                    // find vertices of this face
+                    t.Add(CollectVertex(row, pt));
+                    t.Add(CollectVertex(row, pt + 1));
+                    t.Add(CollectVertex(row - 1, pt + offD));
                 }
             }
         }
 
         // Build mesh and export
-        Mesh mesh = new()
-        {
-            vertices = verts.ToArray(),
-            triangles = tris.ToArray()
-        };
+        Mesh mesh = new();
+        mesh.SetVertices(verts);
+        mesh.subMeshCount = 2;
+        mesh.SetTriangles(baseTris, 0);
+        mesh.SetTriangles(roadTris, 1);
         mesh.RecalculateNormals();
         return mesh;
     }
@@ -213,18 +242,20 @@ public class MeshBuilder : MonoBehaviour
     private Mesh CreateFromNoiseGrid(
         float[,] grid, float unitSize, bool lowPoly, bool forceEdge)
         => CreateFromNoiseGrid(grid, unitSize, lowPoly, forceEdge,
-            HexSide.NULL, HexSide.NULL);
+            HexSide.NULL, HexSide.NULL, new HexSide[] { });
 
 
     private float HexEdgeLerp(float height, int distFromEdge)
     {
-        float t = 1f / ((borderEasing * distFromEdge * distFromEdge) + 1);
+        float d = distFromEdge;
+        float t = 1f / ((borderEasing * d * d) + 1);
         return height + (t * (hillHeight - height));
     }
 
     private float NearRiverLerp(float height, float distFromRiver)
     {
-        float t = 1f / ((riverEasing * distFromRiver * distFromRiver) + 1);
+        float d = distFromRiver;
+        float t = 1f / ((riverEasing * d * d) + 1);
         return height + (t * (0 - height));
     }
 
