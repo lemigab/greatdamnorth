@@ -39,7 +39,7 @@
                     "id": "852140f2-7766-474d-8707-702459ba45f3",
                     "expectedControlType": "",
                     "processors": "",
-                    "interactions": "Hold",
+                    "interactions": "",
                     "initialStateCheck": false
                 },
                 {
@@ -1027,6 +1027,34 @@
                     "processors": "",
                     "groups": "XR",
                     "action": "TrackedDeviceOrientation",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        },
+        {
+            "name": "CameraControls",
+            "id": "63b47bfb-da59-453a-bfe9-52f7ae5eca14",
+            "actions": [
+                {
+                    "name": "MouseZoom",
+                    "type": "Value",
+                    "id": "c0d972bd-beb2-4a42-a022-efbf2390661c",
+                    "expectedControlType": "Vector2",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "07eb14b3-c533-4a71-8509-eaa5334809e5",
+                    "path": "<Mouse>/scroll",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "MouseZoom",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

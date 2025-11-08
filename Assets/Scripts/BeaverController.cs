@@ -4,21 +4,41 @@ public class BeaverController : MonoBehaviour
 {
     public float moveSpeed = 5f;
     public float rotationSpeed = 10f;
+
     public bool isNearTree = false;
-    public bool isHoldingLog = false;
     public bool isNearDam = false;
+
     private GameObject currentDam = null;
     public GameObject currentTree = null;
+    private GameObject branch;
+    
+    private bool _isHoldingLog = false;
+    public bool IsHoldingLog
+    {
+        get { return _isHoldingLog; }
+        set
+        {
+            _isHoldingLog = value;
+            if (branch != null)
+            {
+                Debug.Log("Setting branch active: " + value);
+                branch.SetActive(value);
+            }
+        }
+    }
 
     private bool isPlayerBeaver = false;
     private bool isInEnemyZone = false;
 
-    void Start()
+    public virtual void Start()
     {
-        if (gameObject.CompareTag("Player"))
-        {
-            isPlayerBeaver = true;
-        }
+        //if (gameObject.CompareTag("Player"))
+        //{
+        //    isPlayerBeaver = true;
+        //}
+
+        branch = transform.Find("Branch").gameObject;
+        IsHoldingLog = false;
     }
 
     void OnTriggerEnter(Collider other)
@@ -28,16 +48,17 @@ public class BeaverController : MonoBehaviour
         {
             isNearTree = true;
             currentTree = other.gameObject;
-           // Debug.Log("Near tree: " + currentTree.name);
+            Debug.Log("Near tree: " + currentTree.name);
         }
         if (other.gameObject.name.StartsWith("Dam"))
         {
             isNearDam = true;
             currentDam = other.gameObject;
-           // Debug.Log("Near dam: " + currentDam.name);
+            Debug.Log("Near dam: " + currentDam.name + " " + currentDam.GetComponent<BeaverDam>().Level().ToString());
         }
         if (other.gameObject.name.StartsWith("Land"))
         {
+            /*
             if (other.gameObject.CompareTag("EnemyZone") && isPlayerBeaver)
             {
               //  Debug.Log("In Enemy Zone");
@@ -47,7 +68,15 @@ public class BeaverController : MonoBehaviour
             {
                // Debug.Log("In Player Zone");
                 isInEnemyZone = true;
+
             }
+            */
+            moveSpeed = 2f;
+        }
+        if (other.gameObject.name.StartsWith("Water"))
+        {
+            Debug.Log("Near water: " + other.gameObject.name);
+            moveSpeed = 5f;
         }
     }
 
@@ -80,7 +109,7 @@ public class BeaverController : MonoBehaviour
         }
     }
 
-    public void Move(Vector3 targetDirection)
+    public virtual void Move(Vector3 targetDirection)
     {
         transform.position += targetDirection * (moveSpeed * Time.deltaTime);
 
@@ -91,26 +120,46 @@ public class BeaverController : MonoBehaviour
 
     public void Chew()
     {
-        if (isNearTree && !isHoldingLog && currentTree != null)
+        /*
+        if (isNearTree && !IsHoldingLog && currentTree != null)
         {
             //Debug.Log("Chew tree: " + currentTree.name);
             currentTree.SetActive(false);
             if (isPlayerBeaver) SandboxGlobal.GetInstance().PlayerHoldingLog = true;
             else SandboxGlobal.GetInstance().EnemyHoldingLog = true;
-            isHoldingLog = true;
+            IsHoldingLog = true; // Automatically sets branch active
             currentTree = null;
+        }
+        */
+        IsHoldingLog = true;
+    }
+
+    public void InteractWithDam()
+    {
+        if (currentDam != null)
+        {
+            if (IsHoldingLog)
+            {
+                BuildDam();
+            }
+            else
+            {
+                BreakDam();
+            }
         }
     }
 
     public void BuildDam()
     {
-        if (isHoldingLog && isInEnemyZone && currentDam != null)
+        if (currentDam != null)
         {
-           // Debug.Log("Build dam: " + currentDam.name);
+           Debug.Log("Build dam: " + currentDam.name);
+           currentDam.GetComponent<BeaverDam>().Increment();
+           IsHoldingLog = false;
+           /*
             if (isPlayerBeaver)
             {
-                SandboxGlobal.GetInstance().EnemyDamLevel++;
-                SandboxGlobal.GetInstance().PlayerHoldingLog = false;
+                currentDam.GetComponent<BeaverDam>().Increment();
                // Debug.Log("Enemy dam level: " + SandboxGlobal.GetInstance().EnemyDamLevel);
             }
             else
@@ -118,13 +167,20 @@ public class BeaverController : MonoBehaviour
                 SandboxGlobal.GetInstance().PlayerDamLevel++;
                 SandboxGlobal.GetInstance().EnemyHoldingLog = false;
             }
-            isHoldingLog = false;
+            */
+            IsHoldingLog = false; // Automatically sets branch inactive
         }
     }
 
     public void BreakDam()
     {
-        //Debug.Log(isHoldingLog);
+        //Debug.Log(IsHoldingLog);
+        if (currentDam != null)
+        {
+            currentDam.GetComponent<BeaverDam>().Decrement();
+            IsHoldingLog = true; // Automatically sets branch active
+        }
+        /*
         if (isNearDam && !isInEnemyZone && !isHoldingLog
             && currentDam.gameObject.GetComponent<MeshRenderer>().enabled)
         {
@@ -139,8 +195,8 @@ public class BeaverController : MonoBehaviour
                 SandboxGlobal.GetInstance().EnemyDamLevel--;
                 SandboxGlobal.GetInstance().EnemyHoldingLog = true;
             }
-            isHoldingLog = true;
-        }
+            */
+            //isHoldingLog = true;
     }
 
     // TODO: Implement lodge building later
@@ -148,4 +204,4 @@ public class BeaverController : MonoBehaviour
     {
         //Debug.Log("Build lodge");
     }
-}
+} 
