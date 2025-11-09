@@ -6,7 +6,7 @@ using System.Collections;
 /// Reuses BeaverController for movement and actions.
 /// </summary>
 [RequireComponent(typeof(BeaverController))]
-public class AIController : MonoBehaviour
+public class AIController : BeaverController
 {
     public enum AIState
     {
@@ -21,7 +21,6 @@ public class AIController : MonoBehaviour
 
     public AIState GetState() => currentState;
 
-    private BeaverController beaver;
     private SandboxGlobal global;
 
     private GameObject targetTree;
@@ -44,7 +43,6 @@ public class AIController : MonoBehaviour
 
     void Start()
     {
-        beaver = GetComponent<BeaverController>();
         global = SandboxGlobal.GetInstance();
         PickNewPatrolPoint();
     }
@@ -150,7 +148,7 @@ public class AIController : MonoBehaviour
 
         if (actionTimer <= 0f)
         {
-            beaver.Chew();
+            base.Chew();
             //global.EnemyHoldingLog = true;  // AI beaver now "has a log"
             currentState = AIState.Patrol_With_Log;
         }
@@ -162,7 +160,7 @@ public class AIController : MonoBehaviour
 
         if (actionTimer <= 0f)
         {
-            beaver.BuildDam();
+            base.BuildDam();
             //global.PlayerDamLevel += 1;
             //global.EnemyHoldingLog = false;
             targetTree = FindNearestTree();
@@ -176,7 +174,7 @@ public class AIController : MonoBehaviour
 
         if (actionTimer <= 0f)
         {
-            beaver.BreakDam();
+            base.BreakDam();
             //global.EnemyHoldingLog = true;  // AI beaver now "has a log"
             currentState = AIState.Patrol_With_Log;
         }
@@ -189,7 +187,7 @@ public class AIController : MonoBehaviour
         Vector3 direction = target - transform.position;
         direction.y = 0f;  // Flatten the movement
         direction.Normalize();
-        beaver.Move(direction);
+        base.Move(direction);
     }
 
     private void PickNewPatrolPoint()
