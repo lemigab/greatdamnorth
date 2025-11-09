@@ -7,8 +7,6 @@ public class PlayerController : BeaverController
 
     private Vector2 moveInput;
 
-    private CharacterController characterController;
-
     void Update()
     {
         if (moveInput.x != 0 || moveInput.y != 0) {

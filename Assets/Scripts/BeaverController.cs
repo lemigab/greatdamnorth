@@ -2,6 +2,9 @@ using UnityEngine;
 
 public class BeaverController : MonoBehaviour
 {
+
+    public Rigidbody rb;
+    
     public float moveSpeed = 5f;
     public float rotationSpeed = 10f;
 
@@ -46,6 +49,9 @@ public class BeaverController : MonoBehaviour
         //{
         //    isPlayerBeaver = true;
         //}
+        rb = GetComponent<Rigidbody>();
+        rb.isKinematic = false;
+        rb.useGravity = true;
 
         branch = transform.Find("Branch").gameObject;
         isHoldingBranch = false;
@@ -66,14 +72,10 @@ public class BeaverController : MonoBehaviour
             currentDam = other.gameObject;
             Debug.Log("Near dam: " + currentDam.name + " " + currentDam.GetComponent<BeaverDam>().Level().ToString());
         }
-        if (other.gameObject.name.StartsWith("Land"))
-        {
-            moveSpeed = 2f;
-        }
         if (other.gameObject.name.StartsWith("Water"))
         {
-            //Debug.Log("On water: " + other.gameObject.name);
-            moveSpeed = 5f;
+            moveSpeed = 8f;
+            //Debug.Log("On water: " + other.gameObject.name + " " + moveSpeed.ToString());
         }
     }
 
@@ -93,18 +95,25 @@ public class BeaverController : MonoBehaviour
         }
         if (other.gameObject.name.StartsWith("Water"))
         {
-            Debug.Log("On land: " + other.gameObject.name);
-            moveSpeed = 2f;
+            moveSpeed = 4f;
+            //Debug.Log("On land: " + other.gameObject.name + " " + moveSpeed.ToString());
         }
     }
 
     public virtual void Move(Vector3 targetDirection)
     {
+        /*
         transform.position += targetDirection * (moveSpeed * Time.deltaTime);
 
         var rotationDirection = targetDirection;
         var rotation = Quaternion.LookRotation(targetDirection);
         transform.rotation = Quaternion.Lerp(transform.rotation, rotation, rotationSpeed * Time.deltaTime);
+        */
+        Vector3 moveDirection = targetDirection * moveSpeed;
+        rb.MovePosition(transform.position + moveDirection * Time.deltaTime);
+
+        var rotation = Quaternion.LookRotation(targetDirection);
+        rb.MoveRotation(Quaternion.Lerp(transform.rotation, rotation, rotationSpeed * Time.deltaTime));
     }
 
     public void Chew()
