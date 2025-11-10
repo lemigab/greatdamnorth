@@ -33,8 +33,7 @@ public class CameraFollowController : MonoBehaviour
         targetZoom = currentZoom = orbitalFollow.Radius;
     }
 
-    // Update is called once per frame
-    void Update()
+    void LateUpdate()
     {
         if (scrollDelta.y != 0)
         {

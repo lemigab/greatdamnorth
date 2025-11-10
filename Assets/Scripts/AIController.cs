@@ -65,15 +65,46 @@ public class AIController : BeaverController
     // NEW: reference to NavMesh movement helper
     private AINavMesh nav;
 
+    private NavMeshAgent agent;
+    private float stuckTimer = 0f;
+    private Vector3 lastPosition;
+    private float stuckCheckInterval = 2f;
+    private float stuckThreshold = 0.2f;
+
     void Start()
     {
+        base.Start();
         global = SandboxGlobal.GetInstance();
         nav = GetComponent<AINavMesh>();
+        agent = GetComponent<NavMeshAgent>();
+        
+        if (base.rb != null)
+        {
+            base.rb.isKinematic = true;
+            base.rb.useGravity = false;
+        }
+        
+        if (agent != null)
+        {
+            agent.updatePosition = true;
+            agent.updateRotation = true;
+            agent.updateUpAxis = false;
+            
+            agent.speed = 2f;
+            agent.acceleration = 8f;
+            agent.angularSpeed = 120f;
+            agent.autoBraking = true;
+            agent.autoRepath = true;
+        }
 
         NavMeshHit hit;
-        if (NavMesh.SamplePosition(transform.position, out hit, 2f, NavMesh.AllAreas))
+        if (NavMesh.SamplePosition(transform.position, out hit, 5f, NavMesh.AllAreas))
         {
             transform.position = hit.position;
+            if (agent != null)
+            {
+                agent.Warp(hit.position);
+            }
         }
 
         if (nav == null)
@@ -81,6 +112,7 @@ public class AIController : BeaverController
             Debug.LogError("AIController: AINavMesh component is missing!");
         }
 
+        lastPosition = transform.position;
         PickNewPatrolPoint();
     }
 
@@ -96,6 +128,18 @@ public class AIController : BeaverController
                 return;
             }
         }
+        
+        // Sync NavMeshAgent with transform (in case of external position changes)
+        if (agent != null && agent.enabled)
+        {
+            float distance = Vector3.Distance(transform.position, agent.nextPosition);
+            if (distance > 0.5f)
+            {
+                agent.Warp(transform.position);
+            }
+        }
+        
+        CheckIfStuck();
 
         switch (currentState)
         {
@@ -114,6 +158,59 @@ public class AIController : BeaverController
             case AIState.Break_Dam:
                 BreakDam();
                 break;
+        }
+    }
+    
+    void FixedUpdate()
+    {
+        // Update the Rigidbody position to match the NavMeshAgent position
+        // Since Rigidbody is kinematic, NavMeshAgent controls position
+        if (agent != null && agent.enabled && base.rb != null)
+        {
+            base.rb.MovePosition(agent.nextPosition);
+        }
+    }
+    
+    /// <summary>
+    /// Detects if the AI is stuck and tries to recover.    
+    /// </summary>
+    private void CheckIfStuck()
+    {
+        if (agent == null || !agent.enabled) return;
+        
+        if (agent.pathPending || agent.isStopped) return;
+        
+        stuckTimer += Time.deltaTime;
+        
+        if (stuckTimer >= stuckCheckInterval)
+        {
+            float distanceMoved = Vector3.Distance(transform.position, lastPosition);
+            
+            if (distanceMoved < stuckThreshold)
+            {
+                Debug.LogWarning($"AI Beaver: Stuck detected! Distance moved: {distanceMoved}");
+                
+                if (nav != null) nav.Stop();
+                
+                Vector3 randomOffset = Random.insideUnitSphere * 5f;
+                randomOffset.y = 0;
+                Vector3 recoveryPos = transform.position + randomOffset;
+                
+                NavMeshHit hit;
+                if (NavMesh.SamplePosition(recoveryPos, out hit, 5f, NavMesh.AllAreas))
+                {
+                    if (nav != null) nav.MoveTo(hit.position);
+                    Debug.Log($"AI Beaver: Attempting recovery move to {hit.position}");
+                }
+                else
+                {
+                    PickNewPatrolPoint();
+                    if (nav != null) nav.MoveTo(patrolTarget);
+                }
+            }
+            
+            stuckTimer = 0f;
+            lastPosition = transform.position;
         }
     }
 
@@ -328,21 +425,76 @@ public class AIController : BeaverController
 
     /// <summary>
     /// Now uses NavMesh via AINavMesh instead of base.Move(direction).
+    /// Validates path before moving to prevent getting stuck.
     /// </summary>
     private void MoveTowards(Vector3 target)
     {
-        if (nav == null) return;
+        if (nav == null || agent == null) return;
+        
+        if (agent.hasPath && agent.pathStatus == NavMeshPathStatus.PathComplete)
+        {
+            float currentTargetDist = Vector3.Distance(agent.destination, target);
+            if (currentTargetDist < 1f)
+            {
+                return;
+            }
+        }
+        
         nav.MoveTo(target);
+        
+        StartCoroutine(CheckPathAfterDelay(target));
+    }
+    
+    /// <summary>
+    /// Checks if path is valid after a short delay, tries alternative if not.
+    /// </summary>
+    private IEnumerator CheckPathAfterDelay(Vector3 target)
+    {
+        yield return new WaitForSeconds(0.1f);
+        
+        if (agent != null && agent.pathStatus == NavMeshPathStatus.PathInvalid)
+        {
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(target, out hit, 10f, NavMesh.AllAreas))
+            {
+                nav.MoveTo(hit.position);
+                Debug.Log($"AI Beaver: Invalid path to {target}, trying nearby position {hit.position}");
+            }
+            else
+            {
+                PickNewPatrolPoint();
+                nav.MoveTo(patrolTarget);
+                Debug.Log($"AI Beaver: No valid path found, picking new patrol point");
+            }
+        }
     }
 
     private void PickNewPatrolPoint()
     {
-        Vector2 randomCircle = Random.insideUnitCircle * patrolRadius;
-        patrolTarget = new Vector3(
-            transform.position.x + randomCircle.x,
-            transform.position.y,
-            transform.position.z + randomCircle.y
-        );
+        int attempts = 0;
+        Vector3 candidatePos;
+        
+        do
+        {
+            Vector2 randomCircle = Random.insideUnitCircle * patrolRadius;
+            candidatePos = new Vector3(
+                transform.position.x + randomCircle.x,
+                transform.position.y,
+                transform.position.z + randomCircle.y
+            );
+            
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(candidatePos, out hit, 10f, NavMesh.AllAreas))
+            {
+                patrolTarget = hit.position;
+                return;
+            }
+            
+            attempts++;
+        } while (attempts < 5);
+        
+        patrolTarget = candidatePos;
+        Debug.LogWarning($"AI Beaver: Could not find valid NavMesh position for patrol, using {patrolTarget}");
     }
 
     private GameObject FindNearestTree()
@@ -363,6 +515,7 @@ public class AIController : BeaverController
         return nearest;
     }
 
+
     private void OnTriggerEnter(Collider other)
     {
         // Detect trees and dams by tag or name
@@ -380,7 +533,12 @@ public class AIController : BeaverController
 
             currentDamCollider = other;
         }
+        else if (other.name.StartsWith("Water"))
+        {
+            agent.speed = 8f;
+        }
     }
+
 
     private void OnTriggerExit(Collider other)
     {
@@ -404,6 +562,10 @@ public class AIController : BeaverController
             }
             
             currentDamCollider = null;
+        }
+        else if (other.name.StartsWith("Water"))
+        {
+            agent.speed = 4f;
         }
     }
 

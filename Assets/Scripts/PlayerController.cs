@@ -7,7 +7,7 @@ public class PlayerController : BeaverController
 
     private Vector2 moveInput;
 
-    void Update()
+    void FixedUpdate()
     {
         if (moveInput.x != 0 || moveInput.y != 0) {
             Vector3 forward = cameraTransform.forward;
