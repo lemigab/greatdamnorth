@@ -3,19 +3,9 @@ using UnityEngine.InputSystem;
 
 public class PlayerController : BeaverController
 {
-    //private InputSystem_Actions input = null;
-    //private BeaverController beaver = null;
     public Transform cameraTransform;
-    public bool shouldFaceMoveDirection = false;
 
     private Vector2 moveInput;
-
-    private CharacterController characterController;
-
-    void Awake()
-    {
-       // input = new InputSystem_Actions();
-    }
 
     void Update()
     {
@@ -29,23 +19,7 @@ public class PlayerController : BeaverController
             Vector3 direction = forward * moveInput.y + right * moveInput.x;
             Vector3 targetDirection = Quaternion.Euler(0, Camera.main.transform.eulerAngles.y, 0) * direction;
             base.Move(direction);
-            if (shouldFaceMoveDirection && direction.magnitude > 0.001f) {
-                Quaternion targetRotation = Quaternion.LookRotation(direction);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 10f * Time.deltaTime);
-            }
         }
-    }
-
-    void OnEnable()
-    {
-       // input.Player.Enable();
-       // input.Camera.Enable();
-    }
-
-    void OnDisable()
-    {
-       // input.Player.Disable();
-       // input.Camera.Disable();
     }
 
     public void OnMove(InputAction.CallbackContext context) {
