@@ -21,7 +21,7 @@ public class BeaverController : MonoBehaviour
         set { _isNearDam = value; }
     }
 
-    private GameObject currentDam = null;
+    public GameObject currentDam = null;
     public GameObject currentLog = null;
     private GameObject branch;
     
