@@ -4,17 +4,15 @@ using UnityEngine.InputSystem;
 
 public class CameraFollowController : MonoBehaviour
 {
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    [SerializeField] private float zoomSpeed= 2f;
-    [SerializeField] private float zoomLerpSpeed = 10.0f;
-    [SerializeField] private float zoomMin = 5.0f;
-    [SerializeField] private float zoomMax = 15.0f;
+    private float zoomSpeed= 2f;
+    private float zoomLerpSpeed = 10.0f;
+    private float zoomMin = 5.0f;
+    private float zoomMax = 15.0f;
     private float currentZoom;
     private float targetZoom;
-    private float zoomVelocity = 0.0f;
 
     private InputSystem_Actions input;
-    public CinemachineCamera camera;
+    public CinemachineCamera cinemachineCamera;
     private CinemachineOrbitalFollow orbitalFollow;
 
     private Vector2 scrollDelta;
@@ -27,8 +25,8 @@ public class CameraFollowController : MonoBehaviour
 
         Cursor.lockState = CursorLockMode.Locked;
 
-        camera = GameObject.Find("PlayerCamera").GetComponent<CinemachineCamera>();
-        orbitalFollow = camera.GetComponent<CinemachineOrbitalFollow>();
+        cinemachineCamera = GameObject.Find("PlayerCamera").GetComponent<CinemachineCamera>();
+        orbitalFollow = cinemachineCamera.GetComponent<CinemachineOrbitalFollow>();
 
         targetZoom = currentZoom = orbitalFollow.Radius;
     }

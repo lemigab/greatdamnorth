@@ -44,8 +44,8 @@ public class AIController : BeaverController
     // Movement
     private Vector3 patrolTarget;
     private float patrolRadius = 50f;
-    private float patrolSpeed = 2f;   // NOTE: NavMeshAgent speed is on the agent now
-    private float detectionRange = 5f;
+    // private float patrolSpeed = 2f;   // NOTE: NavMeshAgent speed is on the agent now
+    // private float detectionRange = 5f;
 
     // Timer control
     private float actionTimer = 0f;
@@ -71,7 +71,7 @@ public class AIController : BeaverController
     private float stuckCheckInterval = 2f;
     private float stuckThreshold = 0.2f;
 
-    void Start()
+    public override void Start()
     {
         base.Start();
         global = SandboxGlobal.GetInstance();
@@ -367,9 +367,10 @@ public class AIController : BeaverController
         }
     }
 
-    private void BuildDam()
+    private new void BuildDam()
     {
         actionTimer -= Time.deltaTime;
+
 
         if (actionTimer <= 0f)
         {
@@ -410,7 +411,7 @@ public class AIController : BeaverController
         }
     }
 
-    private void BreakDam()
+    private new void BreakDam()
     {
         actionTimer -= Time.deltaTime;
 
@@ -497,18 +498,54 @@ public class AIController : BeaverController
         Debug.LogWarning($"AI Beaver: Could not find valid NavMesh position for patrol, using {patrolTarget}");
     }
 
+    /// <summary>
+    /// Calculates the NavMesh path distance to a target position.
+    /// Returns float.MaxValue if no valid path exists.
+    /// </summary>
+    private float CalculatePathDistance(Vector3 targetPosition)
+    {
+        if (agent == null || !agent.enabled) return float.MaxValue;
+        
+        NavMeshHit hit;
+        if (!NavMesh.SamplePosition(targetPosition, out hit, 5f, NavMesh.AllAreas))
+        {
+            return float.MaxValue;
+        }
+        
+        NavMeshPath path = new NavMeshPath();
+        if (!agent.CalculatePath(hit.position, path))
+        {
+            return float.MaxValue;
+        }
+        
+        if (path.corners.Length < 2)
+        {
+            return float.MaxValue;
+        }
+        
+        float pathDistance = 0f;
+        for (int i = 0; i < path.corners.Length - 1; i++)
+        {
+            pathDistance += Vector3.Distance(path.corners[i], path.corners[i + 1]);
+        }
+        
+        return pathDistance;
+    }
+
     private GameObject FindNearestTree()
     {
         GameObject[] trees = GameObject.FindGameObjectsWithTag("Tree");
         GameObject nearest = null;
-        float minDist = Mathf.Infinity;
+        float minPathDist = Mathf.Infinity;
 
         foreach (GameObject tree in trees)
         {
-            float dist = Vector3.Distance(transform.position, tree.transform.position);
-            if (dist < minDist)
+            if (tree == null || !tree.activeInHierarchy) continue;
+            
+            float pathDist = CalculatePathDistance(tree.transform.position);
+            if (pathDist < minPathDist)
             {
-                minDist = dist;
+                minPathDist = pathDist;
                 nearest = tree;
             }
         }
@@ -673,16 +710,16 @@ public class AIController : BeaverController
             return null;
 
         GameObject nearest = null;
-        float minDist = Mathf.Infinity;
+        float minPathDist = Mathf.Infinity;
 
         foreach (GameObject tree in myRiverTrees)
         {
             if (tree == null || !tree.activeInHierarchy) continue;
 
-            float dist = Vector3.Distance(transform.position, tree.transform.position);
-            if (dist < minDist)
+            float pathDist = CalculatePathDistance(tree.transform.position);
+            if (pathDist < minPathDist)
             {
-                minDist = dist;
+                minPathDist = pathDist;
                 nearest = tree;
             }
         }

@@ -40,8 +40,8 @@ public class BeaverController : MonoBehaviour
         }
     }
 
-    private bool isPlayerBeaver = false;
-    private bool isInEnemyZone = false;
+    // private bool isPlayerBeaver = false;
+    // private bool isInEnemyZone = false;
 
     public virtual void Start()
     {
