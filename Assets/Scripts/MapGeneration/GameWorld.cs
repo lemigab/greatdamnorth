@@ -9,11 +9,10 @@ public class GameWorld : MonoBehaviour
 
     private float _defaultWaterHeight;
 
-    private void Start()
+    private void Awake()
     {
         _instance = this;
     }
-
 
     public static GameWorld Instance() => _instance;
 

@@ -1,47 +1,49 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
-public class PlayerController : MonoBehaviour
+public class PlayerController : BeaverController
 {
-    private InputSystem_Actions input = null;
-    private BeaverController beaver = null;
+    public Transform cameraTransform;
 
-    void Awake()
+    private Vector2 moveInput;
+
+    void FixedUpdate()
     {
-        input = new InputSystem_Actions();
-    }
-    void Start()
-    {
-        //input = new InputSystem_Actions();
-        beaver = GetComponent<BeaverController>();
-    }
-    void Update()
-    {
-        Vector2 moveInput = input.Player.Move.ReadValue<Vector2>();
         if (moveInput.x != 0 || moveInput.y != 0) {
-            Vector3 direction = new Vector3(moveInput.x, 0, moveInput.y);
+            Vector3 forward = cameraTransform.forward;
+            Vector3 right = cameraTransform.right;
+            forward.y = 0;
+            right.y = 0;
+            forward.Normalize();
+            right.Normalize();
+            Vector3 direction = forward * moveInput.y + right * moveInput.x;
             Vector3 targetDirection = Quaternion.Euler(0, Camera.main.transform.eulerAngles.y, 0) * direction;
-            beaver.Move(targetDirection);
-        }
-
-        if (input.Player.Chew.IsPressed()) {
-            beaver.Chew();
-        }
-
-        if (input.Player.Interact.IsPressed()) {
-            beaver.BuildDam();
-        }
-        if (input.Player.BreakDam.IsPressed()) {
-            beaver.BreakDam();
+            base.Move(direction);
         }
     }
 
-    void OnEnable()
-    {
-        input.Player.Enable();
+    public void OnMove(InputAction.CallbackContext context) {
+        moveInput = context.ReadValue<Vector2>();
     }
 
-    void OnDisable()
-    {
-        input.Player.Disable();
+    public void OnChew(InputAction.CallbackContext context) {
+        if (context.performed) {
+            //Debug.Log("Player Chew");
+            base.Chew();
+        }
+    }
+
+    public void OnBuildDam(InputAction.CallbackContext context) {
+        if (context.performed) {
+            //Debug.Log("Player BuildDam");
+            base.BuildDam();
+        }
+    }
+
+    public void OnBreakDam(InputAction.CallbackContext context) {
+        if (context.performed) {
+           //Debug.Log("Player BreakDam");
+           base.BreakDam();
+        }
     }
 }

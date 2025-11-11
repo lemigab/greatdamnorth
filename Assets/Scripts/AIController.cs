@@ -1,12 +1,17 @@
 using UnityEngine;
 using System.Collections;
+using UnityEngine.AI;
+using System.Collections.Generic;
+using WorldUtil;
 
 /// <summary>
 /// Controls the AI beaver using a finite state machine.
-/// Reuses BeaverController for movement and actions.
+/// Reuses BeaverController for actions (chew/build/break),
+/// and AINavMesh/NavMeshAgent for movement.
 /// </summary>
-[RequireComponent(typeof(BeaverController))]
-public class AIController : MonoBehaviour
+[RequireComponent(typeof(AINavMesh))]
+[RequireComponent(typeof(NavMeshAgent))]
+public class AIController : BeaverController
 {
     public enum AIState
     {
@@ -18,39 +23,118 @@ public class AIController : MonoBehaviour
     }
 
     private AIState currentState = AIState.Patrol_With_No_Log;
-
     public AIState GetState() => currentState;
 
-    private BeaverController beaver;
     private SandboxGlobal global;
 
     private GameObject targetTree;
     private GameObject targetDam;
 
+    private World world;
+
+    // Hexes that make up the river this beaver spawned on
+    private List<Hex> myRiverHexes = new List<Hex>();
+
+    // Trees that sit on those hexes
+    private List<GameObject> myRiverTrees = new List<GameObject>();
+
+    private bool worldInitialized = false;
+
     // Movement
     private Vector3 patrolTarget;
     private float patrolRadius = 50f;
-    private float patrolSpeed = 2f;
-    private float detectionRange = 5f;
+    // private float patrolSpeed = 2f;   // NOTE: NavMeshAgent speed is on the agent now
+    // private float detectionRange = 5f;
 
     // Timer control
     private float actionTimer = 0f;
-    private float chewDuration = 1.5f;
-    private float buildDuration = 1.5f;
-    private float breakDuration = 1.5f;
+    private float chewDuration = 0.1f;
+    private float buildDuration = 0.1f;
+    private float breakDuration = 0.1f;
+
+    // Dams along my river (hexes that have exitDam != null)
+    private List<Hex> myRiverDamHexes = new List<Hex>();
+
+    // Which dam index along my river I'm currently targeting for building
+    private int currentDamBuildIndex = 0;
 
     private Collider currentTreeCollider;
     private Collider currentDamCollider;
 
-    void Start()
+    // NEW: reference to NavMesh movement helper
+    private AINavMesh nav;
+
+    private NavMeshAgent agent;
+    private Vector3 lastPosition;
+
+    public override void Start()
     {
-        beaver = GetComponent<BeaverController>();
+        base.Start();
         global = SandboxGlobal.GetInstance();
+        nav = GetComponent<AINavMesh>();
+        agent = GetComponent<NavMeshAgent>();
+        
+        if (base.rb != null)
+        {
+            base.rb.isKinematic = true;
+            base.rb.useGravity = false;
+        }
+        
+        if (agent != null)
+        {
+            agent.updatePosition = true;
+            agent.updateRotation = true;
+            agent.updateUpAxis = false;
+            
+            agent.speed = 2f;
+            agent.acceleration = 8f;
+            agent.angularSpeed = 120f;
+            agent.autoBraking = true;
+            agent.autoRepath = true;
+        }
+
+        NavMeshHit hit;
+        if (NavMesh.SamplePosition(transform.position, out hit, 5f, NavMesh.AllAreas))
+        {
+            transform.position = hit.position;
+            if (agent != null)
+            {
+                agent.Warp(hit.position);
+            }
+        }
+
+        if (nav == null)
+        {
+            Debug.LogError("AIController: AINavMesh component is missing!");
+        }
+
+        lastPosition = transform.position;
         PickNewPatrolPoint();
     }
 
     void Update()
     {
+        // Ensure the World is ready before running AI logic
+        if (!worldInitialized)
+        {
+            TryInitWorld();
+            if (!worldInitialized)
+            {
+                // World still not ready this frame; skip AI logic
+                return;
+            }
+        }
+        
+        // Sync NavMeshAgent with transform (in case of external position changes)
+        if (agent != null && agent.enabled)
+        {
+            float distance = Vector3.Distance(transform.position, agent.nextPosition);
+            if (distance > 0.5f)
+            {
+                agent.Warp(transform.position);
+            }
+        }
+
         switch (currentState)
         {
             case AIState.Patrol_With_No_Log:
@@ -70,35 +154,32 @@ public class AIController : MonoBehaviour
                 break;
         }
     }
+    
+    void FixedUpdate()
+    {
+        // Update the Rigidbody position to match the NavMeshAgent position
+        // Since Rigidbody is kinematic, NavMeshAgent controls position
+        if (agent != null && agent.enabled && base.rb != null)
+        {
+            base.rb.MovePosition(agent.nextPosition);
+        }
+    }
+    
 
     // ----------- STATE LOGIC -----------
 
     private void Patrol_NoLog()
     {
-        // 1) Try to break enemy dam first
-        if (global != null && global.enemyDam != null && global.EnemyDamLevel > 0)
-        {
-            targetDam = global.enemyDam;
-            MoveTowards(targetDam.transform.position);
-
-            // Only switch to break state if actually touching dam collider
-            if (currentDamCollider != null && currentDamCollider.gameObject == targetDam)
-            {
-                currentState = AIState.Break_Dam;
-                actionTimer = breakDuration;
-            }
-            return;
-        }
-
-        // 2) Otherwise, find nearest tree
+        // 1) FIRST: try to go for the closest tree on the river I spawned on
         if (targetTree == null || !targetTree.activeInHierarchy)
-            targetTree = FindNearestTree();
+        {
+            targetTree = FindNearestRiverTree();
+        }
 
         if (targetTree != null)
         {
             MoveTowards(targetTree.transform.position);
 
-            // Only chew if physically touching the tree
             if (currentTreeCollider != null && currentTreeCollider.gameObject == targetTree)
             {
                 currentState = AIState.Chew_Tree;
@@ -107,7 +188,25 @@ public class AIController : MonoBehaviour
             return;
         }
 
-        // 3) Fallback wandering
+        // 2) If no river trees left, fall back to any tree in the map
+        if (targetTree == null || !targetTree.activeInHierarchy)
+        {
+            targetTree = FindNearestTree();
+        }
+
+        if (targetTree != null)
+        {
+            MoveTowards(targetTree.transform.position);
+
+            if (currentTreeCollider != null && currentTreeCollider.gameObject == targetTree)
+            {
+                currentState = AIState.Chew_Tree;
+                actionTimer = chewDuration;
+            }
+            return;
+        }
+
+        // 3) Fallback behaviour (your existing dam / wander logic can go here)
         MoveTowards(patrolTarget);
         if (Vector3.Distance(transform.position, patrolTarget) < 1f)
             PickNewPatrolPoint();
@@ -115,130 +214,522 @@ public class AIController : MonoBehaviour
 
     private void Patrol_Log()
     {
-        if (global != null && global.playerDam != null)
+        // No world/dams? Just wander as a fallback.
+        if (world == null || myRiverDamHexes == null || myRiverDamHexes.Count == 0)
         {
-            targetDam = global.playerDam;
-
-            // Only move toward the dam's XZ, keep current Y
-            Vector3 damPos = targetDam.transform.position;
-            Vector3 moveTarget = new Vector3(damPos.x, transform.position.y, damPos.z);
-
-            MoveTowards(moveTarget);
-
-            // When close enough on X/Z, start building
-            Vector3 flatPos = new Vector3(transform.position.x, 0, transform.position.z);
-            Vector3 flatDam = new Vector3(damPos.x, 0, damPos.z);
-            float distance = Vector3.Distance(flatPos, flatDam);
-
-            if (distance < 0.5f) // tweak stop distance as needed
-            {
-                currentState = AIState.Build_Dam;
-                actionTimer = buildDuration;
-            }
-
+            MoveTowards(patrolTarget);
+            if (Vector3.Distance(transform.position, patrolTarget) < 1f)
+                PickNewPatrolPoint();
             return;
         }
 
-        // Fallback wandering
-        MoveTowards(patrolTarget);
-        if (Vector3.Distance(transform.position, patrolTarget) < 1f)
-            PickNewPatrolPoint();
+        // Find the first dam along the river that isn't full (Level < MAX_LVL)
+        int usableIndex = -1;
+        for (int i = 0; i < myRiverDamHexes.Count; i++)
+        {
+            Hex hex = myRiverDamHexes[i];
+            if (hex == null || hex.exitDam == null) continue;
+
+            BeaverDam dam = hex.exitDam;
+            if (dam.Level() < BeaverDam.MAX_LVL)
+            {
+                usableIndex = i;
+                break;
+            }
+        }
+
+        if (usableIndex == -1)
+        {
+            // All dams on this river are already at MAX_LVL; nothing to build.
+            // You can decide to just wander or do something else here.
+            MoveTowards(patrolTarget);
+            if (Vector3.Distance(transform.position, patrolTarget) < 1f)
+                PickNewPatrolPoint();
+            return;
+        }
+
+        currentDamBuildIndex = usableIndex;
+
+        Hex targetHex = myRiverDamHexes[currentDamBuildIndex];
+        if (targetHex == null || targetHex.exitDam == null)
+        {
+            // Defensive: if something went wrong, just wander.
+            MoveTowards(patrolTarget);
+            if (Vector3.Distance(transform.position, patrolTarget) < 1f)
+                PickNewPatrolPoint();
+            return;
+        }
+
+        // The dam GameObject we want to build on
+        targetDam = targetHex.exitDam.gameObject;
+
+        // Move toward the dam's XZ using NavMesh, like Patrol_NoLog
+        Transform buildSpot = targetDam.transform.Find("Pointer");
+        Vector3 targetPos = (buildSpot != null) ? buildSpot.position : targetDam.transform.position;
+
+        // Keep movement mostly in XZ if you like
+        Vector3 moveTarget = new Vector3(targetPos.x, transform.position.y, targetPos.z);
+        MoveTowards(moveTarget);
+
+        // When close enough on X/Z, start building
+        Vector3 flatPos = new Vector3(transform.position.x, 0f, transform.position.z);
+        Vector3 flatDam = new Vector3(targetPos.x, 0f, targetPos.z);
+        float distance = Vector3.Distance(flatPos, flatDam);
+
+        if (distance < 0.5f && currentDam != null) // tweak as needed
+        {
+            currentState = AIState.Build_Dam;
+            actionTimer = buildDuration;
+
+            if (nav != null) nav.Stop();
+        }
     }
+
     private void ChewTree()
     {
         actionTimer -= Time.deltaTime;
 
         if (actionTimer <= 0f)
         {
-            beaver.Chew();
-            //global.EnemyHoldingLog = true;  // AI beaver now "has a log"
+            base.Chew();
+
+            // --- PRINT WHERE THE BEAVER IS GOING NEXT ---
+            if (myRiverDamHexes != null && myRiverDamHexes.Count > 0)
+            {
+                // Find the next target dam hex (same logic Patrol_Log uses)
+                int targetIndex = currentDamBuildIndex;
+                if (targetIndex < 0) targetIndex = 0;
+                if (targetIndex >= myRiverDamHexes.Count)
+                    targetIndex = myRiverDamHexes.Count - 1;
+
+                Hex targetHex = myRiverDamHexes[targetIndex];
+                if (targetHex != null && targetHex.exitDam != null)
+                {
+                    Debug.Log($"AI Beaver: Chewed a log, now heading to Dam-{targetHex.mapPosition.x}-{targetHex.mapPosition.y}");
+                }
+                else
+                {
+                    Debug.Log("AI Beaver: Chewed a log, but no valid dam found on river.");
+                }
+            }
+            else
+            {
+                Debug.Log("AI Beaver: Chewed a log, but no river dams assigned.");
+            }
+            // -------------------------------------------------
+
             currentState = AIState.Patrol_With_Log;
         }
     }
 
-    private void BuildDam()
+    private new void BuildDam()
     {
         actionTimer -= Time.deltaTime;
+        //Debug.Log("Building Dam " + currentDam.name);
 
         if (actionTimer <= 0f)
         {
-            beaver.BuildDam();
-            //global.PlayerDamLevel += 1;
-            //global.EnemyHoldingLog = false;
-            targetTree = FindNearestTree();
+            // Get current dam (based on currentDamBuildIndex)
+            BeaverDam dam = null;
+            if (myRiverDamHexes != null &&
+                currentDamBuildIndex >= 0 &&
+                currentDamBuildIndex < myRiverDamHexes.Count)
+            {
+                Hex hex = myRiverDamHexes[currentDamBuildIndex];
+                if (hex != null)
+                    dam = hex.exitDam;
+            }
+
+            // Only try to build if this dam isn't already full
+            if (dam != null && dam.Level() < BeaverDam.MAX_LVL)
+            {
+                // This should call BeaverController's logic which should in turn
+                // call dam.Increment() internally (or do equivalent).
+                base.BuildDam();
+            }
+
+            // After building, if this dam is now full, move to the next dam
+            if (dam != null && dam.Level() >= BeaverDam.MAX_LVL)
+            {
+                currentDamBuildIndex++;
+                if (currentDamBuildIndex >= myRiverDamHexes.Count)
+                {
+                    // Clamp to last index so we don't blow up;
+                    // future Patrol_Log() calls will detect that all dams are full.
+                    currentDamBuildIndex = myRiverDamHexes.Count - 1;
+                }
+            }
+
+            // After building, go back to searching for a new log
+            targetTree = FindNearestRiverTree() ?? FindNearestTree();
             currentState = AIState.Patrol_With_No_Log;
         }
     }
 
-    private void BreakDam()
+    private new void BreakDam()
     {
         actionTimer -= Time.deltaTime;
+        Debug.Log("Breaking Dam " + currentDam.name);
 
         if (actionTimer <= 0f)
         {
-            beaver.BreakDam();
-            //global.EnemyHoldingLog = true;  // AI beaver now "has a log"
+            // Get current dam (based on currentDamBuildIndex)
+            BeaverDam dam = null;
+            if (myRiverDamHexes != null &&
+                currentDamBuildIndex >= 0 &&
+                currentDamBuildIndex < myRiverDamHexes.Count)
+            {
+                Hex hex = myRiverDamHexes[currentDamBuildIndex];
+                if (hex != null)
+                    dam = hex.exitDam;
+            }
+
+            // Only try to build if this dam isn't already full
+            if (dam != null && dam.Level() > 0)
+            {
+                // This should call BeaverController's logic which should in turn
+                // call dam.Increment() internally (or do equivalent).
+                base.BreakDam();
+            }
+
+            // After breaking, go to patrol with log state
             currentState = AIState.Patrol_With_Log;
         }
     }
 
     // ----------- HELPER METHODS -----------
 
+    /// <summary>
+    /// Now uses NavMesh via AINavMesh instead of base.Move(direction).
+    /// Validates path before moving to prevent getting stuck.
+    /// </summary>
     private void MoveTowards(Vector3 target)
     {
-        Vector3 direction = target - transform.position;
-        direction.y = 0f;  // Flatten the movement
-        direction.Normalize();
-        beaver.Move(direction);
+        if (nav == null || agent == null) return;
+        
+        if (agent.hasPath && agent.pathStatus == NavMeshPathStatus.PathComplete)
+        {
+            float currentTargetDist = Vector3.Distance(agent.destination, target);
+            if (currentTargetDist < 1f)
+            {
+                return;
+            }
+        }
+        
+        nav.MoveTo(target);
+        
+        StartCoroutine(CheckPathAfterDelay(target));
+    }
+    
+    /// <summary>
+    /// Checks if path is valid after a short delay, tries alternative if not.
+    /// </summary>
+    private IEnumerator CheckPathAfterDelay(Vector3 target)
+    {
+        yield return new WaitForSeconds(0.1f);
+        
+        if (agent != null && agent.pathStatus == NavMeshPathStatus.PathInvalid)
+        {
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(target, out hit, 10f, NavMesh.AllAreas))
+            {
+                nav.MoveTo(hit.position);
+                Debug.Log($"AI Beaver: Invalid path to {target}, trying nearby position {hit.position}");
+            }
+            else
+            {
+                PickNewPatrolPoint();
+                nav.MoveTo(patrolTarget);
+                Debug.Log($"AI Beaver: No valid path found, picking new patrol point");
+            }
+        }
     }
 
     private void PickNewPatrolPoint()
     {
-        Vector2 randomCircle = Random.insideUnitCircle * patrolRadius;
-        patrolTarget = new Vector3(
-            transform.position.x + randomCircle.x,
-            transform.position.y,
-            transform.position.z + randomCircle.y
-        );
+        int attempts = 0;
+        Vector3 candidatePos;
+        
+        do
+        {
+            Vector2 randomCircle = Random.insideUnitCircle * patrolRadius;
+            candidatePos = new Vector3(
+                transform.position.x + randomCircle.x,
+                transform.position.y,
+                transform.position.z + randomCircle.y
+            );
+            
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(candidatePos, out hit, 10f, NavMesh.AllAreas))
+            {
+                patrolTarget = hit.position;
+                return;
+            }
+            
+            attempts++;
+        } while (attempts < 5);
+        
+        patrolTarget = candidatePos;
+        Debug.LogWarning($"AI Beaver: Could not find valid NavMesh position for patrol, using {patrolTarget}");
+    }
+
+    /// <summary>
+    /// Calculates the NavMesh path distance to a target position.
+    /// Returns float.MaxValue if no valid path exists.
+    /// </summary>
+    private float CalculatePathDistance(Vector3 targetPosition)
+    {
+        if (agent == null || !agent.enabled) return float.MaxValue;
+        
+        NavMeshHit hit;
+        if (!NavMesh.SamplePosition(targetPosition, out hit, 5f, NavMesh.AllAreas))
+        {
+            return float.MaxValue;
+        }
+        
+        NavMeshPath path = new NavMeshPath();
+        if (!agent.CalculatePath(hit.position, path))
+        {
+            return float.MaxValue;
+        }
+        
+        if (path.corners.Length < 2)
+        {
+            return float.MaxValue;
+        }
+        
+        float pathDistance = 0f;
+        for (int i = 0; i < path.corners.Length - 1; i++)
+        {
+            pathDistance += Vector3.Distance(path.corners[i], path.corners[i + 1]);
+        }
+        
+        return pathDistance;
     }
 
     private GameObject FindNearestTree()
     {
         GameObject[] trees = GameObject.FindGameObjectsWithTag("Tree");
         GameObject nearest = null;
-        float minDist = Mathf.Infinity;
+        float minPathDist = Mathf.Infinity;
 
         foreach (GameObject tree in trees)
         {
-            float dist = Vector3.Distance(transform.position, tree.transform.position);
-            if (dist < minDist)
+            if (tree == null || !tree.activeInHierarchy) continue;
+            
+            float pathDist = CalculatePathDistance(tree.transform.position);
+            if (pathDist < minPathDist)
             {
-                minDist = dist;
+                minPathDist = pathDist;
                 nearest = tree;
             }
         }
         return nearest;
-    }  
+    }
+
 
     private void OnTriggerEnter(Collider other)
-{
-    // Detect trees and dams by tag or name
-    if (other.CompareTag("Tree") || other.name.StartsWith("Tree_"))
     {
-        currentTreeCollider = other;
+        // Detect trees and dams by tag or name
+        if (other.name.StartsWith("Log"))
+        {
+            isNearLog = true;
+            currentLog = other.gameObject;
+
+            currentTreeCollider = other;
+        }
+        else if (other.name.StartsWith("Dam-"))
+        {
+            isNearDam = true;
+            currentDam = other.gameObject;
+
+            currentDamCollider = other;
+        }
+        else if (other.name.StartsWith("Pointer"))
+        {
+            isNearDam = true;
+            currentDam = other.transform.parent.gameObject;
+
+            currentDamCollider = other;
+        }
+        else if (other.name.StartsWith("Water"))
+        {
+            agent.speed = 8f;
+        }
     }
-    else if (other.gameObject == global.playerDam || other.gameObject == global.enemyDam)
+
+
+    private void OnTriggerExit(Collider other)
     {
-        currentDamCollider = other;
+        if (other == currentTreeCollider)
+        {
+            isNearLog = false;
+            if (currentLog == other.gameObject)
+            {
+                currentLog = null;
+            }
+            
+            currentTreeCollider = null;
+        }
+
+        if (other == currentDamCollider)
+        {
+            isNearDam = false;
+            if (currentDam == other.gameObject)
+            {
+                currentDam = null;
+            }
+            
+            currentDamCollider = null;
+        }
+        else if (other.name.StartsWith("Water"))
+        {
+            agent.speed = 4f;
+        }
     }
-}
 
-private void OnTriggerExit(Collider other)
-{
-    if (other == currentTreeCollider)
-        currentTreeCollider = null;
+    private void InitRiverAndTrees()
+    {
+        if (world == null || world.all == null || world.all.Count == 0)
+        {
+            Debug.LogWarning("AIController: World is null or empty; cannot init river.");
+            return;
+        }
 
-    if (other == currentDamCollider)
-        currentDamCollider = null;
-}
+        if (world == null || world.all == null || world.all.Count == 0)
+        {
+            Debug.LogWarning("AIController: World is null or empty; cannot init river.");
+            return;
+        }
+
+        // 1) Which hex did I spawn on (or nearest to)?
+        Hex myHex = FindClosestHexToPosition(transform.position);
+        if (myHex == null)
+        {
+            Debug.LogWarning("AIController: Could not find starting hex for this beaver.");
+            return;
+        }
+
+        // 2) Which river is that hex on?
+        try
+        {
+            myRiverHexes = world.FindRiverWithHex(myHex);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"AIController: Hex not on any river: {e.Message}");
+            return;
+        }
+
+        if (myRiverHexes == null || myRiverHexes.Count == 0)
+        {
+            Debug.LogWarning("AIController: myRiverHexes is empty after FindRiverWithHex.");
+            return;
+        }
+
+        // 3) Collect all Log-children from landMesh on those hexes
+        myRiverTrees.Clear();
+
+        foreach (Hex hex in myRiverHexes)
+        {
+            if (hex == null || hex.landMesh == null) continue;
+
+            Transform land = hex.landMesh.transform;
+
+            // look for child objects whose name starts with "Log"
+            foreach (Transform child in land)
+            {
+                if (child.name.StartsWith("Log", System.StringComparison.OrdinalIgnoreCase))
+                {
+                    myRiverTrees.Add(child.gameObject);
+                    break; // one tree per tile, so we can stop after first match
+                }
+            }
+        }
+
+        Debug.Log($"AIController: Found {myRiverTrees.Count} river trees for this beaver.");
+
+        myRiverDamHexes.Clear();
+        foreach (Hex hex in myRiverHexes)
+        {
+            if (hex != null && hex.exitDam != null)
+            {
+                myRiverDamHexes.Add(hex);
+            }
+        }
+
+        currentDamBuildIndex = 0;
+
+        Debug.Log($"AIController: Found {myRiverDamHexes.Count} dam hexes on my river.");
+    
+    }
+
+    private Hex FindClosestHexToPosition(Vector3 pos)
+    {
+        Hex closest = null;
+        float minDist = Mathf.Infinity;
+
+        foreach (Hex hex in world.all)
+        {
+            if (hex == null || hex.landMesh == null) continue;
+
+            Vector3 hexPos = hex.landMesh.transform.position;
+            float dist = Vector3.Distance(pos, hexPos);
+
+            if (dist < minDist)
+            {
+                minDist = dist;
+                closest = hex;
+            }
+        }
+
+        return closest;
+    }
+
+    private GameObject FindNearestRiverTree()
+    {
+        if (myRiverTrees == null || myRiverTrees.Count == 0)
+            return null;
+
+        GameObject nearest = null;
+        float minPathDist = Mathf.Infinity;
+
+        foreach (GameObject tree in myRiverTrees)
+        {
+            if (tree == null || !tree.activeInHierarchy) continue;
+
+            float pathDist = CalculatePathDistance(tree.transform.position);
+            if (pathDist < minPathDist)
+            {
+                minPathDist = pathDist;
+                nearest = tree;
+            }
+        }
+
+        return nearest;
+    }
+
+        private void TryInitWorld()
+    {
+        if (worldInitialized) return;
+
+        GameWorld gw = GameWorld.Instance();
+        if (gw == null)
+        {
+            // GameWorld not ready yet
+            return;
+        }
+
+        World w = gw.World();
+        if (w == null)
+        {
+            // WorldBuilder hasn't finished ConstructMap() yet
+            return;
+        }
+
+        world = w;
+        InitRiverAndTrees();
+        worldInitialized = true;
+        Debug.Log("AIController: World initialized and river trees cached.");
+    }
 }

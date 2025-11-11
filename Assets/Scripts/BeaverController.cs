@@ -1,63 +1,93 @@
 using UnityEngine;
+using UnityEngine.AI;
+using System.Collections;
 
 public class BeaverController : MonoBehaviour
 {
+
+    public Rigidbody rb;
+
     public float moveSpeed = 5f;
     public float rotationSpeed = 10f;
-    public bool isNearTree = false;
-    public bool isHoldingLog = false;
-    public bool isNearDam = false;
-    private GameObject currentDam = null;
-    public GameObject currentTree = null;
 
-    private bool isPlayerBeaver = false;
-    private bool isInEnemyZone = false;
-
-    void Start()
+    private bool _isNearLog = false;
+    public bool isNearLog
     {
-        if (gameObject.CompareTag("Player"))
+        get { return _isNearLog; }
+        set { _isNearLog = value; }
+    }
+    private bool _isNearDam = false;
+    public bool isNearDam
+    {
+        get { return _isNearDam; }
+        set { _isNearDam = value; }
+    }
+
+    public GameObject currentDam = null;
+    public GameObject currentLog = null;
+    private GameObject branch;
+
+    private bool _isHoldingBranch = false;
+    public bool isHoldingBranch
+    {
+        get { return _isHoldingBranch; }
+        set
         {
-            isPlayerBeaver = true;
+            _isHoldingBranch = value;
+            if (branch != null)
+            {
+                //Debug.Log("Setting branch active: " + value);
+                branch.SetActive(value);
+            }
         }
+    }
+
+
+    public virtual void Start()
+    {
+        rb = GetComponent<Rigidbody>();
+        rb.isKinematic = false;
+        rb.useGravity = true;
+
+        branch = transform.Find("Branch").gameObject;
+        isHoldingBranch = false;
     }
 
     void OnTriggerEnter(Collider other)
     {
         //Debug.Log("OnTriggerEnter: " + other.gameObject.name);
-        if (other.gameObject.name.StartsWith("Tree"))
+        if (other.gameObject.name.StartsWith("Log"))
         {
-            isNearTree = true;
-            currentTree = other.gameObject;
-           // Debug.Log("Near tree: " + currentTree.name);
+            isNearLog = true;
+            currentLog = other.gameObject;
+            //Debug.Log("Near log: " + currentLog.name);
         }
         if (other.gameObject.name.StartsWith("Dam"))
         {
             isNearDam = true;
             currentDam = other.gameObject;
-           // Debug.Log("Near dam: " + currentDam.name);
+            //Debug.Log("Near dam: " + currentDam.name + " " + currentDam.GetComponent<BeaverDam>().Level().ToString());
         }
-        if (other.gameObject.name.StartsWith("Land"))
+        if (other.gameObject.name.StartsWith("Pointer"))
         {
-            if (other.gameObject.CompareTag("EnemyZone") && isPlayerBeaver)
-            {
-              //  Debug.Log("In Enemy Zone");
-                isInEnemyZone = true;
-            }
-            if (other.gameObject.CompareTag("PlayerZone") && !isPlayerBeaver)
-            {
-               // Debug.Log("In Player Zone");
-                isInEnemyZone = true;
-            }
+            isNearDam = true;
+            currentDam = other.transform.parent.gameObject;
+            //Debug.Log("Near dam: " + currentDam.name + " " + currentDam.GetComponent<BeaverDam>().Level().ToString());
+        }
+        if (other.gameObject.name.StartsWith("Water"))
+        {
+            moveSpeed = 8f;
+            //Debug.Log("On water: " + other.gameObject.name + " " + moveSpeed.ToString());
         }
     }
 
     void OnTriggerExit(Collider other)
     {
-        if (other.gameObject.name.StartsWith("Tree"))
+        if (other.gameObject.name.StartsWith("Log"))
         {
-            isNearTree = false;
-            currentTree = null;
-           // Debug.Log("Not near tree");
+            isNearLog = false;
+            currentLog = null;
+            // Debug.Log("Not near tree");
         }
         if (other.gameObject.name.StartsWith("Dam"))
         {
@@ -65,81 +95,136 @@ public class BeaverController : MonoBehaviour
             currentDam = null;
             //Debug.Log("Not near dam");
         }
-        if (other.gameObject.name.StartsWith("Land"))
+        if (other.gameObject.name.StartsWith("Pointer"))
         {
-            if (other.gameObject.CompareTag("EnemyZone") && isPlayerBeaver)
-            {
-                isInEnemyZone = false;
-                //Debug.Log("Not in Enemy Zone");
-            }
-            if (other.gameObject.CompareTag("PlayerZone") && !isPlayerBeaver)
-            {
-                isInEnemyZone = false;
-                //Debug.Log("Not in Enemy Zone");
-            }
+            isNearDam = false;
+            currentDam = null;
+            //Debug.Log("Not near dam");
+        }
+        if (other.gameObject.name.StartsWith("Water"))
+        {
+            moveSpeed = 4f;
+            //Debug.Log("On land: " + other.gameObject.name + " " + moveSpeed.ToString());
         }
     }
 
-    public void Move(Vector3 targetDirection)
+    public virtual void Move(Vector3 targetDirection)
     {
-        transform.position += targetDirection * (moveSpeed * Time.deltaTime);
+        Vector3 moveDirection = targetDirection * moveSpeed;
+        rb.MovePosition(transform.position + moveDirection * Time.deltaTime);
 
-        var rotationDirection = Quaternion.Euler(-90, 0, 0) * targetDirection;
-        var rotation = Quaternion.LookRotation(targetDirection) * Quaternion.Euler(-90, 0, 0);
-        transform.rotation = Quaternion.Lerp(transform.rotation, rotation, rotationSpeed * Time.deltaTime);
+        var rotation = Quaternion.LookRotation(targetDirection);
+        rb.MoveRotation(Quaternion.Lerp(transform.rotation, rotation, rotationSpeed * Time.deltaTime));
     }
 
     public void Chew()
     {
-        if (isNearTree && !isHoldingLog && currentTree != null)
+        if (isNearLog && !isHoldingBranch && currentLog != null)
         {
-            //Debug.Log("Chew tree: " + currentTree.name);
-            currentTree.SetActive(false);
-            if (isPlayerBeaver) SandboxGlobal.GetInstance().PlayerHoldingLog = true;
-            else SandboxGlobal.GetInstance().EnemyHoldingLog = true;
-            isHoldingLog = true;
-            currentTree = null;
+            currentLog.SetActive(false);
+            isHoldingBranch = true;
+            currentLog = null;
         }
     }
 
     public void BuildDam()
     {
-        if (isHoldingLog && isInEnemyZone && currentDam != null)
+        // Only start if we *currently* can build
+        if (currentDam == null || !isHoldingBranch)
+            return;
+
+        // Capture the dam we’re building on right now
+        BeaverDam dam = currentDam.GetComponent<BeaverDam>();
+        if (dam == null)
+            return;
+
+        StartCoroutine(BuildDamSequence(dam));
+    }
+    private IEnumerator BuildDamSequence(BeaverDam dam)
+    {
+        NavMeshAgent agent = null;
+        float originalOffset = 0f;
+        float jumpHeight = 4f;     // how high above the dam
+        float hangTime = 0.2f;     // how long before dam grows
+        float fallTime = 0.5f;     // how long to ease back down
+        bool isAI = false;
+
+        // If this beaver is an AI (has NavMeshAgent), position it above the dam
+        if (dam != null && isHoldingBranch &&
+            TryGetComponent<NavMeshAgent>(out agent) && agent.enabled)
         {
-           // Debug.Log("Build dam: " + currentDam.name);
-            if (isPlayerBeaver)
+            isAI = true;
+            originalOffset = agent.baseOffset;
+
+            Vector3 damPos = dam.transform.position;
+
+            // Snap the agent to the dam's XZ on the NavMesh
+            if (NavMesh.SamplePosition(damPos, out var hit, 2f, NavMesh.AllAreas))
             {
-                SandboxGlobal.GetInstance().EnemyDamLevel++;
-                SandboxGlobal.GetInstance().PlayerHoldingLog = false;
-               // Debug.Log("Enemy dam level: " + SandboxGlobal.GetInstance().EnemyDamLevel);
+                agent.Warp(hit.position);
             }
             else
             {
-                SandboxGlobal.GetInstance().PlayerDamLevel++;
-                SandboxGlobal.GetInstance().EnemyHoldingLog = false;
+                agent.Warp(damPos);
             }
-            isHoldingLog = false;
+
+            // Visually lift it above the dam
+            agent.baseOffset = originalOffset + jumpHeight;
+
+            if (rb != null)
+            {
+                // keep Rigidbody aligned with agent
+                rb.position = agent.nextPosition + Vector3.up * agent.baseOffset;
+            }
+
+            //Debug.Log($"AI jump: {name} baseOffset={agent.baseOffset}");
+        }
+
+        // Wait while the AI is "in the air" before dam gets bigger
+        yield return new WaitForSeconds(hangTime);
+
+        // Now actually grow the dam and consume the log
+        if (dam != null)
+        {
+            //Debug.Log("Build dam: " + dam.gameObject.name);
+            dam.Increment();
+        }
+
+        isHoldingBranch = false;
+        
+        // Smoothly drop AI back down to normal height
+        if (isAI && agent != null)
+        {
+            float elapsed = 0f;
+            float startOffset = agent.baseOffset;
+            float targetOffset = originalOffset;
+
+            while (elapsed < fallTime)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / fallTime);
+                agent.baseOffset = Mathf.Lerp(startOffset, targetOffset, t);
+
+                if (rb != null)
+                {
+                    rb.position = agent.nextPosition + Vector3.up * agent.baseOffset;
+                }
+
+                yield return null;
+            }
+
+            agent.baseOffset = targetOffset;
         }
     }
 
     public void BreakDam()
     {
-        //Debug.Log(isHoldingLog);
-        if (isNearDam && !isInEnemyZone && !isHoldingLog
-            && currentDam.gameObject.GetComponent<MeshRenderer>().enabled)
+
+        if (currentDam != null)
         {
-            //Debug.Log("Break dam");
-            if (isPlayerBeaver)
-            {
-                SandboxGlobal.GetInstance().PlayerDamLevel--;
-                SandboxGlobal.GetInstance().PlayerHoldingLog = true;
-            }
-            else
-            {
-                SandboxGlobal.GetInstance().EnemyDamLevel--;
-                SandboxGlobal.GetInstance().EnemyHoldingLog = true;
-            }
-            isHoldingLog = true;
+            //Debug.Log("Break dam: " + currentDam.name);
+            currentDam.GetComponent<BeaverDam>().Decrement();
+            isHoldingBranch = true;
         }
     }
 
@@ -148,4 +233,4 @@ public class BeaverController : MonoBehaviour
     {
         //Debug.Log("Build lodge");
     }
-}
+} 
