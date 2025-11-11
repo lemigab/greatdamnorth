@@ -48,9 +48,9 @@ public class AIController : BeaverController
 
     // Timer control
     private float actionTimer = 0f;
-    private float chewDuration = 1.5f;
-    private float buildDuration = 1.5f;
-    private float breakDuration = 1.5f;
+    private float chewDuration = 0.1f;
+    private float buildDuration = 0.1f;
+    private float breakDuration = 0.1f;
 
     // Dams along my river (hexes that have exitDam != null)
     private List<Hex> myRiverDamHexes = new List<Hex>();
@@ -65,10 +65,7 @@ public class AIController : BeaverController
     private AINavMesh nav;
 
     private NavMeshAgent agent;
-    private float stuckTimer = 0f;
     private Vector3 lastPosition;
-    private float stuckCheckInterval = 2f;
-    private float stuckThreshold = 0.2f;
 
     public override void Start()
     {
@@ -137,8 +134,6 @@ public class AIController : BeaverController
                 agent.Warp(transform.position);
             }
         }
-        
-        CheckIfStuck();
 
         switch (currentState)
         {
@@ -170,48 +165,6 @@ public class AIController : BeaverController
         }
     }
     
-    /// <summary>
-    /// Detects if the AI is stuck and tries to recover.    
-    /// </summary>
-    private void CheckIfStuck()
-    {
-        if (agent == null || !agent.enabled) return;
-        
-        if (agent.pathPending || agent.isStopped) return;
-        
-        stuckTimer += Time.deltaTime;
-        
-        if (stuckTimer >= stuckCheckInterval)
-        {
-            float distanceMoved = Vector3.Distance(transform.position, lastPosition);
-            
-            if (distanceMoved < stuckThreshold)
-            {
-                Debug.LogWarning($"AI Beaver: Stuck detected! Distance moved: {distanceMoved}");
-                
-                if (nav != null) nav.Stop();
-                
-                Vector3 randomOffset = Random.insideUnitSphere * 5f;
-                randomOffset.y = 0;
-                Vector3 recoveryPos = transform.position + randomOffset;
-                
-                NavMeshHit hit;
-                if (NavMesh.SamplePosition(recoveryPos, out hit, 5f, NavMesh.AllAreas))
-                {
-                    if (nav != null) nav.MoveTo(hit.position);
-                    Debug.Log($"AI Beaver: Attempting recovery move to {hit.position}");
-                }
-                else
-                {
-                    PickNewPatrolPoint();
-                    if (nav != null) nav.MoveTo(patrolTarget);
-                }
-            }
-            
-            stuckTimer = 0f;
-            lastPosition = transform.position;
-        }
-    }
 
     // ----------- STATE LOGIC -----------
 
@@ -372,7 +325,7 @@ public class AIController : BeaverController
     private new void BuildDam()
     {
         actionTimer -= Time.deltaTime;
-
+        Debug.Log("Building Dam " + currentDam.name);
 
         if (actionTimer <= 0f)
         {
@@ -569,6 +522,13 @@ public class AIController : BeaverController
         {
             isNearDam = true;
             currentDam = other.gameObject;
+
+            currentDamCollider = other;
+        }
+        else if (other.name.StartsWith("Pointer"))
+        {
+            isNearDam = true;
+            currentDam = other.transform.parent.gameObject;
 
             currentDamCollider = other;
         }

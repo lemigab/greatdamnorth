@@ -74,6 +74,12 @@ public class BeaverController : MonoBehaviour
             currentDam = other.gameObject;
             Debug.Log("Near dam: " + currentDam.name + " " + currentDam.GetComponent<BeaverDam>().Level().ToString());
         }
+        if (other.gameObject.name.StartsWith("Pointer"))
+        {
+            isNearDam = true;
+            currentDam = other.transform.parent.gameObject;
+            Debug.Log("Near dam: " + currentDam.name + " " + currentDam.GetComponent<BeaverDam>().Level().ToString());
+        }
         if (other.gameObject.name.StartsWith("Water"))
         {
             moveSpeed = 8f;
@@ -90,6 +96,12 @@ public class BeaverController : MonoBehaviour
             // Debug.Log("Not near tree");
         }
         if (other.gameObject.name.StartsWith("Dam"))
+        {
+            isNearDam = false;
+            currentDam = null;
+            //Debug.Log("Not near dam");
+        }
+        if (other.gameObject.name.StartsWith("Pointer"))
         {
             isNearDam = false;
             currentDam = null;
