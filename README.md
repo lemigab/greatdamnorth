@@ -1,20 +1,72 @@
-# Assignment 2 - FSM Machine Enemy
+# Great Dam North - Assignment 3
 
-## FSM
-<img width="503" height="541" alt="Screenshot 2025-10-12 at 5 18 43 PM" src="https://github.com/user-attachments/assets/6ebf5a6b-3a7b-4041-b79f-83d1fed4152c" />
+## Controls
 
-## FSM States Description
-When the game starts, the AI is put into the Patrol_With_No_Log state. From here, it checks if there is a dam built in its own territory. If there is one, the AI goes to the dam and enters the Break_Dam state where it breaks one level of the dam and receives a log in its mouth. This then takes the AI into the Patrol_With_Log state. From here, it goes to the player-side dam and enters the Build_Dam state. This state builds one level of dam in the player’s dam, taking the log from the AI’s mouth. This then takes it back to the Patrol_With_No_Log state.
+### Player Controls
 
-Alternatively, if there are no dam levels in the AI’s dam, it will go to the nearest tree to itself, entering the Chew_Tree state. In this state the AI will chew the tree, breaking it, before transitioning to the Patrol_With_Log state. From here, it goes to the player-side dam and enters the Build_Dam state. This state builds one level of dam in the player’s dam, taking the log from the AI’s mouth. This then takes it back to the Patrol_With_No_Log state.
+- **WASD** - Move beaver (movement is relative to camera orientation)
+- **C** - Chew tree or break dam
+- **E** - Build dam (requires holding a log/branch)
+- **Space** - When near a dam to jump over it
 
-The AI will only break a dam in its own territory and will only build a dam in the player’s territory. It also prioritizes breaking a dam in its own territory over chewing a tree as both will give it a log but breaking the dam gives other benefits. The AI cannot break a dam or chew a tree while there is a log in its mouth, so it will complete building the dam before checking if there is a dam in its territory again.
+### Camera Controls
+
+- **Mouse** - Pan camera around the scene
+- **Mouse Scroll** - Zoom in/out
+- **1** - Switch to player camera view
+- **2** - Switch to next AI camera in list
+
+## AI System
+
+### Finite State Machine
+
+[View Assignment 2 README](PreviousAssignments/A2_README.md)
+
+#### AI Decision Logic
+
+- AI prioritizes chewing trees for branches when available
+- When no trees are available break enemy dams in other territories to get branches
+- AI will only build dams in its territory and break dams in enemy territory
+- Cannot chew trees or break dams while holding a log (must build dam first)
+- Cannot build dam without holding a log
+
+### Pathfinding System
+
+- **Unity NavMesh System** - AI uses Unity's NavMeshAgent for efficient pathfinding
+- **Path Distance Calculation** - AI calculates shortest path distance rather than straight-line distance when finding nearest targets
+- **Water Prioritization** - AI prioritizes water routes since beavers move twice as fast in water (8 units/sec vs 4 units/sec on land)
+- **Dynamic Obstacle Avoidance** - All beavers use NavMeshObstacle components that dynamically carve the NavMesh, ensuring AI beavers automatically avoid each other and the player
+
+## World Generation
+
+### Procedural Hexagonal World
+
+- World is procedurally generated using a base hexagonal tile template
+- Map is divided into six areas with their own river system
+- The river system connects the tiles in an area together
+- Each area connects to others via roads between tiles
+- Beavers spawn in designated areas at game start
+
+## Gameplay Mechanics
+
+### Dam System
+
+- Beavers can build dams using logs/branches collected from trees
+- Dams can be built in own territory to flood tiles
+- Dams can be broken in enemy territory to get logs and unflood tiles
+- Dam levels affect water height in upstream tiles
+
+### Log System
+
+- Beavers chew trees to collect logs/branches
+- Must hold a log/branch to build dams
+- Breaking dams also provides logs/branches
 
 ## Demo Video
-https://drive.google.com/file/d/1zi2KMyx2k87uFZ6gZ8g4rFiyfTBkeabk/view?usp=drive_link
+[video link](https://drive.google.com/file/d/1o6mNmgn2bmx546VvHUm0vr15Ux4kvOn-/view?usp=sharing)
 
-## Group Members
-CISC 486 Group 18 (Great Dam North)
+## CISC 486 Group 18
+
 - Owen Meima (21owm1)
-- Gabriel Lemieux (19gml2) 
+- Gabriel Lemieux (19gml2)
 - Charlie Kevill (21cmk11)
