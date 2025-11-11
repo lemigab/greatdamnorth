@@ -311,13 +311,16 @@ public class AIController : BeaverController
         targetDam = targetHex.exitDam.gameObject;
 
         // Move toward the dam's XZ using NavMesh, like Patrol_NoLog
-        Vector3 damPos = targetDam.transform.position;
-        Vector3 moveTarget = new Vector3(damPos.x, transform.position.y, damPos.z);
+        Transform buildSpot = targetDam.transform.Find("Pointer");
+        Vector3 targetPos = (buildSpot != null) ? buildSpot.position : targetDam.transform.position;
+
+        // Keep movement mostly in XZ if you like
+        Vector3 moveTarget = new Vector3(targetPos.x, transform.position.y, targetPos.z);
         MoveTowards(moveTarget);
 
         // When close enough on X/Z, start building
         Vector3 flatPos = new Vector3(transform.position.x, 0f, transform.position.z);
-        Vector3 flatDam = new Vector3(damPos.x, 0f, damPos.z);
+        Vector3 flatDam = new Vector3(targetPos.x, 0f, targetPos.z);
         float distance = Vector3.Distance(flatPos, flatDam);
 
         if (distance < 0.5f && currentDam != null) // tweak as needed

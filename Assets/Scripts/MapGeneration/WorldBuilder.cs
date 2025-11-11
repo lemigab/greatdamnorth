@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
+using Unity.AI.Navigation;
 using WorldUtil;
 using G = WorldUtil.Geometry;
 using C = WorldUtil.Constructs;
@@ -16,6 +17,8 @@ public class WorldBuilder : MonoBehaviour
     public GameObject originLog;
     public GameObject treeContainer;
 
+    public NavMeshSurface surface;
+
     public int mapSize; // longest diameter
     public float waterHeight;
     public C.Construct construct;
@@ -24,6 +27,8 @@ public class WorldBuilder : MonoBehaviour
     private void Start()
     {
         ConstructMap();
+        surface.BuildNavMesh();
+        
     }
 
 
