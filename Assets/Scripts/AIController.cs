@@ -325,7 +325,7 @@ public class AIController : BeaverController
     private new void BuildDam()
     {
         actionTimer -= Time.deltaTime;
-        Debug.Log("Building Dam " + currentDam.name);
+        //Debug.Log("Building Dam " + currentDam.name);
 
         if (actionTimer <= 0f)
         {
@@ -369,10 +369,30 @@ public class AIController : BeaverController
     private new void BreakDam()
     {
         actionTimer -= Time.deltaTime;
+        Debug.Log("Breaking Dam " + currentDam.name);
 
         if (actionTimer <= 0f)
         {
-            base.BreakDam();
+            // Get current dam (based on currentDamBuildIndex)
+            BeaverDam dam = null;
+            if (myRiverDamHexes != null &&
+                currentDamBuildIndex >= 0 &&
+                currentDamBuildIndex < myRiverDamHexes.Count)
+            {
+                Hex hex = myRiverDamHexes[currentDamBuildIndex];
+                if (hex != null)
+                    dam = hex.exitDam;
+            }
+
+            // Only try to build if this dam isn't already full
+            if (dam != null && dam.Level() > BeaverDam.MIN_LVL)
+            {
+                // This should call BeaverController's logic which should in turn
+                // call dam.Increment() internally (or do equivalent).
+                base.BreakDam();
+            }
+
+            // After breaking, go to patrol with log state
             currentState = AIState.Patrol_With_Log;
         }
     }
