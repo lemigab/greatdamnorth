@@ -63,8 +63,7 @@
 - Breaking dams also provides logs/branches
 
 ## Demo Video
-
-https://drive.google.com/file/d/1o6mNmgn2bmx546VvHUm0vr15Ux4kvOn-/view?usp=sharing
+[video link](https://drive.google.com/file/d/1o6mNmgn2bmx546VvHUm0vr15Ux4kvOn-/view?usp=sharing)
 
 ## CISC 486 Group 18
 
