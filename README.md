@@ -65,6 +65,9 @@
 ## Demo Video
 [video link](https://drive.google.com/file/d/1o6mNmgn2bmx546VvHUm0vr15Ux4kvOn-/view?usp=sharing)
 
+## Scene Instructions
+The Scene that contains the game in unity is PathfindingDemoScene
+
 ## CISC 486 Group 18
 
 - Owen Meima (21owm1)
