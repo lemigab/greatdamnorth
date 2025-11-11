@@ -36,21 +36,15 @@ public class BeaverController : MonoBehaviour
             _isHoldingBranch = value;
             if (branch != null)
             {
-                Debug.Log("Setting branch active: " + value);
+                //Debug.Log("Setting branch active: " + value);
                 branch.SetActive(value);
             }
         }
     }
 
-    // private bool isPlayerBeaver = false;
-    // private bool isInEnemyZone = false;
 
     public virtual void Start()
     {
-        //if (gameObject.CompareTag("Player"))
-        //{
-        //    isPlayerBeaver = true;
-        //}
         rb = GetComponent<Rigidbody>();
         rb.isKinematic = false;
         rb.useGravity = true;
@@ -66,19 +60,19 @@ public class BeaverController : MonoBehaviour
         {
             isNearLog = true;
             currentLog = other.gameObject;
-            Debug.Log("Near log: " + currentLog.name);
+            //Debug.Log("Near log: " + currentLog.name);
         }
         if (other.gameObject.name.StartsWith("Dam"))
         {
             isNearDam = true;
             currentDam = other.gameObject;
-            Debug.Log("Near dam: " + currentDam.name + " " + currentDam.GetComponent<BeaverDam>().Level().ToString());
+            //Debug.Log("Near dam: " + currentDam.name + " " + currentDam.GetComponent<BeaverDam>().Level().ToString());
         }
         if (other.gameObject.name.StartsWith("Pointer"))
         {
             isNearDam = true;
             currentDam = other.transform.parent.gameObject;
-            Debug.Log("Near dam: " + currentDam.name + " " + currentDam.GetComponent<BeaverDam>().Level().ToString());
+            //Debug.Log("Near dam: " + currentDam.name + " " + currentDam.GetComponent<BeaverDam>().Level().ToString());
         }
         if (other.gameObject.name.StartsWith("Water"))
         {
@@ -116,13 +110,6 @@ public class BeaverController : MonoBehaviour
 
     public virtual void Move(Vector3 targetDirection)
     {
-        /*
-        transform.position += targetDirection * (moveSpeed * Time.deltaTime);
-
-        var rotationDirection = targetDirection;
-        var rotation = Quaternion.LookRotation(targetDirection);
-        transform.rotation = Quaternion.Lerp(transform.rotation, rotation, rotationSpeed * Time.deltaTime);
-        */
         Vector3 moveDirection = targetDirection * moveSpeed;
         rb.MovePosition(transform.position + moveDirection * Time.deltaTime);
 
@@ -190,7 +177,7 @@ public class BeaverController : MonoBehaviour
                 rb.position = agent.nextPosition + Vector3.up * agent.baseOffset;
             }
 
-            Debug.Log($"AI jump: {name} baseOffset={agent.baseOffset}");
+            //Debug.Log($"AI jump: {name} baseOffset={agent.baseOffset}");
         }
 
         // Wait while the AI is "in the air" before dam gets bigger
@@ -199,7 +186,7 @@ public class BeaverController : MonoBehaviour
         // Now actually grow the dam and consume the log
         if (dam != null)
         {
-            Debug.Log("Build dam: " + dam.gameObject.name);
+            //Debug.Log("Build dam: " + dam.gameObject.name);
             dam.Increment();
         }
 
@@ -235,7 +222,7 @@ public class BeaverController : MonoBehaviour
 
         if (currentDam != null)
         {
-            Debug.Log("Break dam: " + currentDam.name);
+            //Debug.Log("Break dam: " + currentDam.name);
             currentDam.GetComponent<BeaverDam>().Decrement();
             isHoldingBranch = true;
         }

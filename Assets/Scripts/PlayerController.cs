@@ -28,21 +28,21 @@ public class PlayerController : BeaverController
 
     public void OnChew(InputAction.CallbackContext context) {
         if (context.performed) {
-            Debug.Log("Player Chew");
+            //Debug.Log("Player Chew");
             base.Chew();
         }
     }
 
     public void OnBuildDam(InputAction.CallbackContext context) {
         if (context.performed) {
-            Debug.Log("Player BuildDam");
+            //Debug.Log("Player BuildDam");
             base.BuildDam();
         }
     }
 
     public void OnBreakDam(InputAction.CallbackContext context) {
         if (context.performed) {
-           Debug.Log("Player BreakDam");
+           //Debug.Log("Player BreakDam");
            base.BreakDam();
         }
     }
