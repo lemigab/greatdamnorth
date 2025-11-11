@@ -271,8 +271,11 @@ namespace WorldUtil
         {
             return side switch
             {
-                HexSide.NW or HexSide.SE => 120f,
-                HexSide.NE or HexSide.SW => 60f,
+                HexSide.NW => 120f,
+                HexSide.SE => -60f,
+                HexSide.NE => 60f,
+                HexSide.SW => -120f,
+                HexSide.S => 180f,
                 _ => 0f
             };
         }

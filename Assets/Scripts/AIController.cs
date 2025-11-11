@@ -9,7 +9,6 @@ using WorldUtil;
 /// Reuses BeaverController for actions (chew/build/break),
 /// and AINavMesh/NavMeshAgent for movement.
 /// </summary>
-[RequireComponent(typeof(BeaverController))]
 [RequireComponent(typeof(AINavMesh))]
 [RequireComponent(typeof(NavMeshAgent))]
 public class AIController : BeaverController
@@ -321,11 +320,7 @@ public class AIController : BeaverController
         Vector3 flatDam = new Vector3(damPos.x, 0f, damPos.z);
         float distance = Vector3.Distance(flatPos, flatDam);
 
-<<<<<<< Updated upstream
-        if (currentDam != null && distance < 0.5f) // tweak as needed
-=======
         if (distance < 0.5f && currentDam != null) // tweak as needed
->>>>>>> Stashed changes
         {
             currentState = AIState.Build_Dam;
             actionTimer = buildDuration;

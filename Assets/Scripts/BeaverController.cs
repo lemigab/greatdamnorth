@@ -1,10 +1,12 @@
 using UnityEngine;
+using UnityEngine.AI;
+using System.Collections;
 
 public class BeaverController : MonoBehaviour
 {
 
     public Rigidbody rb;
-    
+
     public float moveSpeed = 5f;
     public float rotationSpeed = 10f;
 
@@ -24,7 +26,7 @@ public class BeaverController : MonoBehaviour
     public GameObject currentDam = null;
     public GameObject currentLog = null;
     private GameObject branch;
-    
+
     private bool _isHoldingBranch = false;
     public bool isHoldingBranch
     {
@@ -85,7 +87,7 @@ public class BeaverController : MonoBehaviour
         {
             isNearLog = false;
             currentLog = null;
-           // Debug.Log("Not near tree");
+            // Debug.Log("Not near tree");
         }
         if (other.gameObject.name.StartsWith("Dam"))
         {
@@ -128,11 +130,91 @@ public class BeaverController : MonoBehaviour
 
     public void BuildDam()
     {
-        if (currentDam != null && isHoldingBranch)
+        // Only start if we *currently* can build
+        if (currentDam == null || !isHoldingBranch)
+            return;
+
+        // Capture the dam we’re building on right now
+        BeaverDam dam = currentDam.GetComponent<BeaverDam>();
+        if (dam == null)
+            return;
+
+        StartCoroutine(BuildDamSequence(dam));
+    }
+    private IEnumerator BuildDamSequence(BeaverDam dam)
+    {
+        NavMeshAgent agent = null;
+        float originalOffset = 0f;
+        float jumpHeight = 4f;     // how high above the dam
+        float hangTime = 0.2f;     // how long before dam grows
+        float fallTime = 0.5f;     // how long to ease back down
+        bool isAI = false;
+
+        // If this beaver is an AI (has NavMeshAgent), position it above the dam
+        if (dam != null && isHoldingBranch &&
+            TryGetComponent<NavMeshAgent>(out agent) && agent.enabled)
         {
-           Debug.Log("Build dam: " + currentDam.name);
-           currentDam.GetComponent<BeaverDam>().Increment();
-           isHoldingBranch = false;
+            isAI = true;
+            originalOffset = agent.baseOffset;
+
+            Vector3 damPos = dam.transform.position;
+
+            // Snap the agent to the dam's XZ on the NavMesh
+            if (NavMesh.SamplePosition(damPos, out var hit, 2f, NavMesh.AllAreas))
+            {
+                agent.Warp(hit.position);
+            }
+            else
+            {
+                agent.Warp(damPos);
+            }
+
+            // Visually lift it above the dam
+            agent.baseOffset = originalOffset + jumpHeight;
+
+            if (rb != null)
+            {
+                // keep Rigidbody aligned with agent
+                rb.position = agent.nextPosition + Vector3.up * agent.baseOffset;
+            }
+
+            Debug.Log($"AI jump: {name} baseOffset={agent.baseOffset}");
+        }
+
+        // Wait while the AI is "in the air" before dam gets bigger
+        yield return new WaitForSeconds(hangTime);
+
+        // Now actually grow the dam and consume the log
+        if (dam != null)
+        {
+            Debug.Log("Build dam: " + dam.gameObject.name);
+            dam.Increment();
+        }
+
+        isHoldingBranch = false;
+        
+        // Smoothly drop AI back down to normal height
+        if (isAI && agent != null)
+        {
+            float elapsed = 0f;
+            float startOffset = agent.baseOffset;
+            float targetOffset = originalOffset;
+
+            while (elapsed < fallTime)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / fallTime);
+                agent.baseOffset = Mathf.Lerp(startOffset, targetOffset, t);
+
+                if (rb != null)
+                {
+                    rb.position = agent.nextPosition + Vector3.up * agent.baseOffset;
+                }
+
+                yield return null;
+            }
+
+            agent.baseOffset = targetOffset;
         }
     }
 
