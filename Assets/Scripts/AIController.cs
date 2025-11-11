@@ -385,7 +385,7 @@ public class AIController : BeaverController
             }
 
             // Only try to build if this dam isn't already full
-            if (dam != null && dam.Level() > BeaverDam.MIN_LVL)
+            if (dam != null && dam.Level() > 0)
             {
                 // This should call BeaverController's logic which should in turn
                 // call dam.Increment() internally (or do equivalent).
