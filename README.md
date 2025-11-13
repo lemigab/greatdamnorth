@@ -65,6 +65,10 @@
 ## Demo Video
 [video link](https://drive.google.com/file/d/1o6mNmgn2bmx546VvHUm0vr15Ux4kvOn-/view?usp=sharing)
 
+## Scene Instructions
+- The unity scene to load to view the game scene is PathfindingDemoScene
+- MapPainter contains the generated world all the outside object are the templates to generate from
+
 ## CISC 486 Group 18
 
 - Owen Meima (21owm1)
