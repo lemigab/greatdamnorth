@@ -21,12 +21,21 @@ namespace WorldUtil
         // Order of the tuple is arbitrary since roads are bidirectional
         public readonly List<Tuple<Hex, Hex>> roads;
 
+        // An unordered list of possible mound locations
+        public readonly List<HexBinding> moundLocations;
+
+        // An unordered list of syrup farms
+        public readonly List<SyrupFarm> syrupFarms;
+
         public World(List<Hex> all, List<List<Hex>> rivers,
-            List<Tuple<Hex, Hex>> roads)
+            List<Tuple<Hex, Hex>> roads, List<HexBinding> moundLocations,
+            List<SyrupFarm> syrupFarms)
         {
             this.all = all;
             this.rivers = rivers;
             this.roads = roads;
+            this.moundLocations = moundLocations;
+            this.syrupFarms = syrupFarms;
         }
 
         public Hex FindHexWithDam(BeaverDam dam)
@@ -40,6 +49,13 @@ namespace WorldUtil
             foreach (List<Hex> river in rivers)
                 if (river.Contains(hex)) return river;
             throw new Exception("Hex not along any river");
+        }
+
+        public HexBinding FindBindingForMound(BeaverMound mound)
+        {
+            foreach (HexBinding binding in moundLocations)
+                if (binding.mound == mound) return binding;
+            throw new Exception("Mound not found in world");
         }
 
         // Hexes are ordered inverse to river direction
@@ -70,19 +86,21 @@ namespace WorldUtil
         public readonly GameObject landMesh;
         public readonly GameObject waterMesh;
         public readonly BeaverDam exitDam;
+        public readonly BeaverLodge hexLodge;
+
 
         private int _waterLevel = 0;
 
         public Hex(Vector2Int mapPosition,
-            GameObject landMesh, GameObject waterMesh, BeaverDam exitDam)
+            GameObject landMesh, GameObject waterMesh,
+            BeaverDam exitDam, BeaverLodge hexLodge)
         {
             this.mapPosition = mapPosition;
             this.landMesh = landMesh;
             this.waterMesh = waterMesh;
             this.exitDam = exitDam;
+            this.hexLodge = hexLodge;
         }
-
-        public bool HasDam() => exitDam != null;
 
         public int WaterLevel() => _waterLevel;
 
@@ -95,13 +113,46 @@ namespace WorldUtil
     }
 
 
+    public class HexBinding
+    {
+        public readonly Tuple<Hex, Hex> hexes;
+        public readonly BeaverMound mound;
+
+        public HexBinding(Tuple<Hex, Hex> hexes, BeaverMound mound)
+        {
+            this.hexes = hexes;
+            this.mound = mound;
+        }
+
+        public bool HasHex(Hex hex) => hexes.Item1 == hex || hexes.Item2 == hex;
+
+        public SyrupFarm GetController() => mound.Controller();
+
+        public bool IsControlled() => mound.Controller() != null;
+    }
+
+
+    public class SyrupFarm
+    {
+        public readonly Color color;
+        public readonly Hex location;
+
+        public SyrupFarm(Color color, Hex location)
+        {
+            this.color = color;
+            this.location = location;
+        }
+    }
+
+
     public static class Constructs
     {
         public enum Construct
         {
-            EMPTY, // 7-size hexagon with no rivers/roads
+            EMPTY, // blank with no rivers/roads
             HEX7_RIVER6, // 7-size hexagon with 6 rivers and 12 roads
-            HEX9_RIVER6 // 9-size hexagon with outer mountains
+            HEX9_RIVER6, // enhanced form of above
+            HEX11_RIVER6 // same as H9R6 but with a solid mountain border
         }
 
         private static Vector2Int[] VecsOf(params int[] vals)
@@ -179,12 +230,44 @@ namespace WorldUtil
             VecsOf(3, 1, 2, 1), VecsOf(4, 3, 3, 3),
         };
 
+        private readonly static Vector2Int[][] HEX11_RIVER6_RIVERS =
+        {
+            // River 0
+            VecsOf(1, 1, 2, 2, 3, 2, 3, 3, 4, 4, 3, 4, 2, 3, 1, 2), 
+            // River 1
+            VecsOf(1, 5, 2, 5, 2, 4, 3, 5, 4, 5, 4, 6, 3, 6, 2, 6),
+            // River 2
+            VecsOf(5, 9, 5, 8, 4, 7, 5, 7, 5, 6, 6, 7, 6, 8, 6, 9),
+            // River 3
+            VecsOf(9, 9, 8, 8, 7, 8, 7, 7, 6, 6, 7, 6, 8, 7, 9, 8),
+            // River 4
+            VecsOf(9, 5, 8, 5, 8, 6, 7, 5, 6, 5, 6, 4, 7, 4, 8, 4),
+            // River 5
+            VecsOf(5, 1, 5, 2, 6, 3, 5, 3, 5, 4, 4, 3, 4, 2, 4, 1)
+        };
+        private readonly static Vector2Int[][] HEX11_RIVER6_ROADS =
+        {
+        // Roads from R0-1
+        VecsOf(2, 3, 2, 4), VecsOf(4, 4, 4, 5),
+        // Roads from R1-2
+        VecsOf(3, 6, 4, 7), VecsOf(4, 5, 5, 6),
+        // Roads from R2-3
+        VecsOf(6, 8, 7, 8), VecsOf(5, 6, 6, 6),
+        // Roads from R3-4
+        VecsOf(8, 7, 8, 6), VecsOf(6, 6, 6, 5),
+        // Roads from R4-5
+        VecsOf(7, 4, 6, 3), VecsOf(6, 5, 5, 4),
+        // Roads from R5-0
+        VecsOf(4, 2, 3, 2), VecsOf(5, 4, 4, 4),
+        };
+
         public static Vector2Int[][] RiverSets(Construct constr)
         => constr switch
         {
             Construct.EMPTY => EMPTY_RIVERS,
             Construct.HEX7_RIVER6 => HEX7_RIVER6_RIVERS,
             Construct.HEX9_RIVER6 => HEX9_RIVER6_RIVERS,
+            Construct.HEX11_RIVER6 => HEX11_RIVER6_RIVERS,
             _ => throw new NotImplementedException()
         };
 
@@ -194,6 +277,7 @@ namespace WorldUtil
             Construct.EMPTY => EMPTY_ROADS,
             Construct.HEX7_RIVER6 => HEX7_RIVER6_ROADS,
             Construct.HEX9_RIVER6 => HEX9_RIVER6_ROADS,
+            Construct.HEX11_RIVER6 => HEX11_RIVER6_ROADS,
             _ => throw new NotImplementedException()
         };
     }
@@ -328,7 +412,19 @@ namespace WorldUtil
             return all.ToArray();
         }
 
-        private static HexSide OutgoingEdge(Vector2Int srcPos, int mapSize)
+        public static bool IsRiverSource(Vector2Int srcPos, Construct constr)
+        {
+            foreach (Vector2Int[] river in RiverSets(constr))
+                if (river[0] == srcPos) return true;
+            return false;
+        }
+
+        public static bool IsNorthSide(HexSide side)
+        {
+            return (int)side > 0;
+        }
+
+        public static HexSide OutgoingEdge(Vector2Int srcPos, int mapSize)
         {
             int x = srcPos.x;
             int y = srcPos.y;
@@ -353,7 +449,7 @@ namespace WorldUtil
             return HexSide.NULL;
         }
 
-        private static HexSide EdgeFrom(Vector2Int src, Vector2Int dst)
+        public static HexSide EdgeFrom(Vector2Int src, Vector2Int dst)
         {
             int dx = dst.x - src.x;
             int dy = dst.y - src.y;
