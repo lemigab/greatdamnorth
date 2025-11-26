@@ -9,6 +9,7 @@ using C = WorldUtil.Constructs;
 using Random = System.Random;
 using Unity.VisualScripting;
 using static UnityEditor.PlayerSettings;
+using Unity.VisualScripting.Antlr3.Runtime.Tree;
 
 public class WorldBuilder : MonoBehaviour
 {
@@ -28,6 +29,8 @@ public class WorldBuilder : MonoBehaviour
     public int mapSize = 7; // longest diameter
     public int forestSize = 6;
     public float waterHeight = 1.9f;
+    public float waterSwinDepth = 1f;
+    public bool showBuildsOnStart = false;
     public C.Construct construct = C.Construct.HEX7_RIVER6;
 
     public GameWorld world;
@@ -85,7 +88,7 @@ public class WorldBuilder : MonoBehaviour
                 HexSide dS = G.DownstreamSideOf(truePos, mapSize, construct);
                 HexSide[] r = G.RoadSidesOf(truePos, construct);
                 bool f = G.IsRiverSource(truePos, construct);
-                Mesh lM = originMeshBuilder.GenerateWithFeatures(f, uS, dS, r);
+                Mesh lM = originMeshBuilder.GenerateWithFeatures(f, uS, dS, r).Item1;
                 // copy the reference hex
                 GameObject newLandHex = Instantiate(originLandHex, transform);
                 GameObject newWaterHex = Instantiate(originWaterHex, transform);
@@ -99,9 +102,11 @@ public class WorldBuilder : MonoBehaviour
                     rowOrg.y + (j * hexOff.y) + (hexW * 2f)
                 );
                 newLandHex.transform.position = new(pos.x, 0f, pos.y);
-                newWaterHex.transform.position = new(pos.x, waterHeight, pos.y);
+                newWaterHex.transform.position = new(pos.x, -waterHeight, pos.y);
                 newLandHex.name = "Land-" + truePos.x + "-" + truePos.y;
                 newWaterHex.name = "Water-" + truePos.x + "-" + truePos.y;
+                // force down collision box of water tile
+                ForceWaterCollider(newWaterHex);
                 // build dam if downstream exists
                 BeaverDam bd = null;
                 if (dS != HexSide.NULL)
@@ -111,7 +116,7 @@ public class WorldBuilder : MonoBehaviour
                     Vector2 damPos = G.EquivHexPos(dS, hexW);
                     newDam.transform.position = new(
                         pos.x + damPos.x,
-                        waterHeight - originMeshBuilder.hillHeight,
+                        waterHeight - originMeshBuilder.hillHeight + 0.2f,
                         pos.y + damPos.y);
                     newDam.transform.localRotation
                         = Quaternion.Euler(0f, G.AngleToAlign(dS), 0f);
@@ -128,6 +133,7 @@ public class WorldBuilder : MonoBehaviour
                     newLodge.transform.position = new(
                         pos.x + cntr.x, -waterHeight, pos.y + cntr.y);
                     newLodge.name = "Lodge-" + truePos.x + "-" + truePos.y;
+                    newLodge.GetComponent<MeshRenderer>().enabled = showBuildsOnStart;
                     bl = newLodge.GetComponent<BeaverLodge>();
                 }
                 // Create and store hex object
@@ -180,7 +186,9 @@ public class WorldBuilder : MonoBehaviour
                 = Quaternion.Euler(0f, G.AngleToAlign(sideBtw), 0f);
             newMound.name = "Mound-"
                 + r0.x + "-" + r0.y + "-" + r1.x + "-" + r1.y;
-            wMoundLocs.Add(new(hs, newMound.GetComponent<BeaverMound>()));
+            newMound.GetComponent<MeshRenderer>().enabled = showBuildsOnStart;
+            BeaverMound bm = newMound.GetComponent<BeaverMound>();
+            wMoundLocs.Add(new(hs, bm));
         }
         GameWorld.Instance().SetWaterHeight(waterHeight);
         GameWorld.Instance().AddWorld(
@@ -198,6 +206,28 @@ public class WorldBuilder : MonoBehaviour
             children.Add(transform.GetChild(i));
 
         foreach (Transform t in children) DestroyImmediate(t.gameObject);
+    }
+
+
+    public void ForceWaterCollider(GameObject waterHex)
+    {
+        MeshCollider mc = waterHex.GetComponent<MeshCollider>();
+        MeshFilter mf = waterHex.GetComponent<MeshFilter>();
+
+        // Ensure collider uses its own mesh
+        if (mc.sharedMesh == mf.sharedMesh)
+            mc.sharedMesh = Instantiate(mf.sharedMesh);
+
+        Mesh wMesh = mc.sharedMesh;
+
+        Vector3[] wVerts = wMesh.vertices;
+        for (int i = 0; i < wVerts.Length; i++)
+            wVerts[i].y -= waterSwinDepth;
+
+        wMesh.vertices = wVerts;
+        wMesh.RecalculateNormals();
+        wMesh.RecalculateBounds();
+        mc.sharedMesh = wMesh;
     }
 
 

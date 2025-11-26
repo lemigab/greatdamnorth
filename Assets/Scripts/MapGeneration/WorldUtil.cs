@@ -47,6 +47,12 @@ namespace WorldUtil
             throw new Exception("Dam not found in world");
         }
 
+        public Hex FindHexWithLodge(BeaverLodge lodge)
+        {
+            foreach (Hex h in all) if (h.hexLodge == lodge) return h;
+            throw new Exception("Lodge not found in world");
+        }
+
         public List<Hex> FindRiverWithHex(Hex hex)
         {
             foreach (List<Hex> river in rivers)
@@ -223,6 +229,18 @@ namespace WorldUtil
 
                 result[t].Reverse();
             }
+
+
+            // omit subset paths
+            List<Hex> toRemove = new();
+            foreach (Hex h1 in result.Keys)
+                foreach (Hex h2 in result.Keys)
+                {
+                    if (h1 == h2) continue;
+                    if (result[h2].All(x => result[h1].Contains(x)))
+                        toRemove.Add(h2);
+                }
+            foreach (Hex h in toRemove) result.Remove(h);
 
             return result;
 

@@ -32,11 +32,11 @@ public class MeshBuilder : MonoBehaviour
 
 
     [ContextMenu("Generate")]
-    public Mesh Generate()
+    public Tuple<Mesh, Mesh> Generate()
         => GenerateWithFeatures(false, HexSide.N, HexSide.SE, HexSide.S);
 
 
-    public Mesh GenerateWithFeatures(bool forceUpward,
+    public Tuple<Mesh, Mesh> GenerateWithFeatures(bool forceUpward,
         HexSide river1, HexSide river2, params HexSide[] roads)
     {
         resolution = 1 + resolution - (resolution % 2);
@@ -45,12 +45,13 @@ public class MeshBuilder : MonoBehaviour
         float[,] w = NoiseMap.Export(resolution, 0, 0, 0f, 1, 0f, 0f);
 
         Mesh lMesh = CreateFromNoiseGrid(
-            l, scale, lowPoly, forceHills, river1, river2, roads, forceUpward);
+            l, scale, lowPoly, forceHills,
+            river1, river2, roads, forceUpward, true);
         Mesh wMesh = CreateFromNoiseGrid(
             w, scale, lowPoly, false);
 
         ApplyMeshes(lMesh, wMesh, LandMaterialFor(river1, river2, forceUpward));
-        return lMesh;
+        return new(lMesh, wMesh);
     }
 
 
@@ -76,7 +77,8 @@ public class MeshBuilder : MonoBehaviour
     // - i.e. a 5x5 array is a 5-row hexagon; ignore the last 2 of row 1.
     private Mesh CreateFromNoiseGrid(
         float[,] grid, float unitSize, bool lowPoly, bool forceEdge,
-        HexSide riverIn, HexSide riverOut, HexSide[] roads, bool upward)
+        HexSide riverIn, HexSide riverOut, HexSide[] roads,
+        bool upward, bool settle)
     {
         if (grid.GetLength(0) != grid.GetLength(1)
             || grid.GetLength(0) % 2 == 0)
@@ -150,7 +152,8 @@ public class MeshBuilder : MonoBehaviour
                 roadRef[row, pt] = roadHere;
                 float roadOff = roadHere ? hillHeight * 0.01f : 0f;
                 // add to vertex list
-                float vh = unitSize * biasedAlt - hillHeight + roadOff;
+                float set = settle ? hillHeight : 0f;
+                float vh = unitSize * biasedAlt - set + roadOff;
                 tempVerts.Add(new Vector3(vx, vh, vy));
                 // track which list element matches the grid location
                 tempGridRef[row, pt] = vCount++;
@@ -238,7 +241,7 @@ public class MeshBuilder : MonoBehaviour
     {
         if (riverIn == HexSide.NULL && riverOut == HexSide.NULL)
             return mountainLand;
-        else if (hill) return hillLand; 
+        else if (hill) return hillLand;
         return flatLand;
     }
 
@@ -246,7 +249,7 @@ public class MeshBuilder : MonoBehaviour
     private Mesh CreateFromNoiseGrid(
         float[,] grid, float unitSize, bool lowPoly, bool forceEdge)
         => CreateFromNoiseGrid(grid, unitSize, lowPoly, forceEdge,
-            HexSide.NULL, HexSide.NULL, new HexSide[] { }, false);
+            HexSide.NULL, HexSide.NULL, new HexSide[] { }, false, false);
 
 
     private float HexEdgeLerp(float height, int distFromEdge)

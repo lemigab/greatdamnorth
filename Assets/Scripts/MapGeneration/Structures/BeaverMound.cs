@@ -21,7 +21,7 @@ public class BeaverMound : MonoBehaviour
 
     // Using the menu makes you play as Beaver0
     [ContextMenu("Build")]
-    public void Build() 
+    public void AdminBuild() 
         => Build(GameWorld.Instance().lordsChosenBeaver.GetHomeFarm());
 
     [ContextMenu("Dismantle")]

@@ -29,7 +29,7 @@ public class TradeLeaderboard : MonoBehaviour
     private void FixedUpdate()
     {
         if (!scoreCounterOn) return;
-        if (frameCount++ != scoreCountInterval) return;
+        if (frameCount++ % scoreCountInterval != 0) return;
 
         GrantScores();
     }

@@ -6,6 +6,7 @@ public class GameWorld : MonoBehaviour
 {
     public TradeLeaderboard leaderboard;
     public BeaverController lordsChosenBeaver;
+    public BeaverController[] allBeavers;
 
     private static GameWorld _instance;
 

@@ -17,7 +17,6 @@ public class BoatSpawner : MonoBehaviour
 
     private readonly Vector3 spawnOffset = new(0.1f, 0.0f, 0.1f);
 
-    private Dictionary<SyrupFarm, int> spawnTurns = new();
     private Dictionary<SyrupFarm, List<List<Hex>>> routes = new();
 
 
@@ -34,15 +33,17 @@ public class BoatSpawner : MonoBehaviour
             // Decide target path for boat
             List<List<Hex>> possRoutes = routes[f];
             if (routes[f].Count == 0) continue;
-            if (spawnTurns[f] >= possRoutes.Count) spawnTurns[f] = 0;
-            List<Hex> goTo = possRoutes[spawnTurns[f]++];
-            // Create actual boat object
-            Vector3 spawnPoint = f.location.waterMesh
-                .GetComponent<MeshRenderer>().bounds.center;
-            GameObject boat = Instantiate(originBoat.gameObject, transform);
-            boat.transform.position = spawnPoint + spawnOffset;
-            boat.name = "Boat";
-            boat.GetComponent<PreviewBoat>().SetRoute(goTo);
+            // Create actual boat objects
+            // One boat per route to go
+            foreach (List<Hex> path in routes[f])
+            {
+                Vector3 spawnPoint = f.location.waterMesh
+                    .GetComponent<MeshRenderer>().bounds.center;
+                GameObject boat = Instantiate(originBoat.gameObject, transform);
+                boat.transform.position = spawnPoint + spawnOffset;
+                boat.name = "Boat";
+                boat.GetComponent<PreviewBoat>().SetRoute(path);
+            }
         }
     }
 
@@ -51,7 +52,6 @@ public class BoatSpawner : MonoBehaviour
         // This first part is here because the world isn't finished
         //  generating until midway thru Start() execution. So we will instead
         //  fill the turn counter during the first refresh which occurs then
-        bool addTurns = spawnTurns.Count == 0;
         routes.Clear();
         foreach (SyrupFarm f in GameWorld.Instance().World().syrupFarms)
         {
@@ -60,7 +60,6 @@ public class BoatSpawner : MonoBehaviour
             List<List<Hex>> raw = new();
             foreach (List<Hex> r in tps.Values) raw.Add(r);
             routes.Add(f, raw);
-            if (addTurns) spawnTurns.Add(f, 0);
         }
     }
 }

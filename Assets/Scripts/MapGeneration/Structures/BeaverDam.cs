@@ -55,7 +55,9 @@ public class BeaverDam : MonoBehaviour
             h.SetWaterLevel(_lvl);
             Vector3 v = h.waterMesh.transform.position;
             h.waterMesh.transform.position =
-                new(v.x, dL + _lvl * (LVL_MULT / 2f), v.z);
+                new(v.x, -dL + _lvl * OffsetPerLevel(), v.z);
         }
     }
+
+    public float OffsetPerLevel() => (LVL_MULT / 2f);
 }
