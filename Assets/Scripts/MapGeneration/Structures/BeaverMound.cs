@@ -16,11 +16,13 @@ public class BeaverMound : MonoBehaviour
         _ctrl = builder;
         _built = true;
         gameObject.GetComponent<MeshRenderer>().enabled = true;
+        GameWorld.Instance().leaderboard.RefreshTradeControl();
     }
 
     // Using the menu makes you play as Beaver0
     [ContextMenu("Build")]
-    public void Build() => Build(GameWorld.Instance().World().syrupFarms[0]);
+    public void Build() 
+        => Build(GameWorld.Instance().lordsChosenBeaver.GetHomeFarm());
 
     [ContextMenu("Dismantle")]
     public void Dismantle()
@@ -28,5 +30,6 @@ public class BeaverMound : MonoBehaviour
         _ctrl = null;
         _built = false;
         gameObject.GetComponent<MeshRenderer>().enabled = false;
+        GameWorld.Instance().leaderboard.RefreshTradeControl();
     }
 }

@@ -25,9 +25,10 @@ public class WorldBuilder : MonoBehaviour
 
     public NavMeshSurface surface;
 
-    public int mapSize; // longest diameter
-    public float waterHeight;
-    public C.Construct construct;
+    public int mapSize = 7; // longest diameter
+    public int forestSize = 6;
+    public float waterHeight = 1.9f;
+    public C.Construct construct = C.Construct.HEX7_RIVER6;
 
     public GameWorld world;
 
@@ -35,7 +36,7 @@ public class WorldBuilder : MonoBehaviour
     private void Start()
     {
         ConstructMap();
-        surface.BuildNavMesh();
+        //surface.BuildNavMesh(); // turned off for now
 
     }
 
@@ -144,6 +145,7 @@ public class WorldBuilder : MonoBehaviour
         List<Tuple<Hex, Hex>> wRoads = new();
         List<HexBinding> wMoundLocs = new();
         List<SyrupFarm> wFarms = new();
+        int farmCnt = 0;
         foreach (Hex hex in hexes.Values) allHexes.Add(hex);
         foreach (Vector2Int[] river in C.RiverSets(construct))
         {
@@ -153,7 +155,8 @@ public class WorldBuilder : MonoBehaviour
             {
                 Hex targ = hexes[river[i]];
                 hs.Add(targ);
-                if (i == 0) wFarms.Add(new(Color.white, targ));
+                if (i == 0) wFarms.Add(
+                    new("Farm" + farmCnt++, Color.white, targ));
             }
             wRivers.Add(hs);
         }
@@ -216,11 +219,11 @@ public class WorldBuilder : MonoBehaviour
             tree.name = "Tree" + placedTrees.Count;
             placedTrees.Add(placeAt);
         }
-        // border logs
+        // internal logs
         List<Vector3> shufLocations = new(landMesh.vertices);
         Shuffle(shufLocations, rng);
         int logCnt = 0;
-        int maxLogs = isFarm ? 0 : 6;
+        int maxLogs = isFarm ? 0 : forestSize;
         foreach (Vector3 v in shufLocations)
         {
             float lowest = -(originMeshBuilder.hillHeight - waterHeight);

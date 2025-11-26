@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
+using Unity.Burst.Intrinsics;
 using UnityEngine;
 using UnityEngine.UIElements;
+using static UnityEngine.UI.Image;
 using static WorldUtil.Constructs;
 
 namespace WorldUtil
@@ -58,24 +61,171 @@ namespace WorldUtil
             throw new Exception("Mound not found in world");
         }
 
+        public HexBinding FindBindingForRoad(Tuple<Hex, Hex> road)
+        {
+            foreach (HexBinding binding in moundLocations)
+                if (binding.hexes == road) return binding;
+            throw new Exception("Road not found in world");
+        }
+
         // Hexes are ordered inverse to river direction
-        public List<Hex> UpstreamFrom(Hex target)
+        public List<Hex> UpstreamFrom(Hex target, bool inclTarget)
         {
             List<Hex> r = FindRiverWithHex(target);
             int hPos = r.IndexOf(target);
-            if (hPos == 0) return new();
-            r = r.GetRange(0, hPos);
+            if (hPos == 0 && !inclTarget) return new();
+            int off = (inclTarget ? 1 : 0);
+            r = r.GetRange(0, hPos + off);
             r.Reverse();
             return r;
         }
 
         // Hexes are ordered according to river direction
-        public List<Hex> DownstreamFrom(Hex target)
+        public List<Hex> DownstreamFrom(Hex target, bool inclTarget)
         {
             List<Hex> r = FindRiverWithHex(target);
             int hPos = r.IndexOf(target);
-            if (hPos == r.Count - 1) return new();
-            return r.GetRange(hPos + 1, r.Count - 1 - hPos);
+            if (hPos == r.Count - 1 && !inclTarget) return new();
+            int off = (inclTarget ? 0 : 1);
+            return r.GetRange(hPos + off, r.Count - 1 - hPos);
+        }
+
+        // Hex order here is arbitrary
+        public List<Hex> RoadFrom(Hex target, bool inclTarget)
+        {
+            List<Hex> hexes = new();
+            if (inclTarget) hexes.Add(target);
+            foreach (Tuple<Hex, Hex> t in roads)
+            {
+                if (t.Item1 == target) hexes.Add(t.Item2);
+                else if (t.Item2 == target) hexes.Add(t.Item1);
+            }
+            return hexes;
+        }
+
+        // Hex order here is arbitrary
+        // Only looks at roads with a mound of the given farm
+        public List<Hex> ControlledRoadFrom(
+            Hex target, SyrupFarm moundOwner, bool inclTarget)
+        {
+            List<Hex> hexes = new();
+            if (inclTarget) hexes.Add(target);
+            foreach (Tuple<Hex, Hex> t in roads)
+            {
+                if (FindBindingForRoad(t).GetController() == moundOwner)
+                {
+                    if (t.Item1 == target) hexes.Add(t.Item2);
+                    else if (t.Item2 == target) hexes.Add(t.Item1);
+                }
+            }
+            return hexes;
+        }
+
+        // Reachable lodge locations are mapped to a path to them
+        // The path includes the farm hex and the lodge hex
+        // The path is ordered from farm -> lodge
+        // If multiple paths exist, the shortest one is selected
+        public Dictionary<Hex, List<Hex>> AllTradePathsFor(SyrupFarm farm)
+        {
+            // -------- Build adjacency list --------
+            Dictionary<Hex, List<Hex>> graph = new();
+
+            void AddEdge(Hex a, Hex b)
+            {
+                if (!graph.ContainsKey(a)) graph[a] = new();
+                graph[a].Add(b);
+            }
+
+            // Rivers: directed
+            foreach (List<Hex> river in rivers)
+                for (int i = 0; i < river.Count - 1; i++)
+                    AddEdge(river[i], river[i + 1]);
+
+            // Roads: bidirectional
+            foreach (HexBinding hb in moundLocations)
+            {
+                if (hb.GetController() != farm) continue;
+                Tuple<Hex, Hex> r = hb.hexes;
+                AddEdge(r.Item1, r.Item2);
+                AddEdge(r.Item2, r.Item1);
+            }
+
+            // Ensure all hexes exist as keys
+            void Ensure(Hex h)
+            {
+                if (!graph.ContainsKey(h)) graph[h] = new();
+            }
+            foreach (List<Hex> river in rivers)
+                foreach (var h in river)
+                    Ensure(h);
+            foreach (Tuple<Hex, Hex> r in roads)
+            {
+                Ensure(r.Item1);
+                Ensure(r.Item2);
+            }
+            Ensure(farm.location);
+
+            // -------- BFS forward with OWNER RESTRICTIONS --------
+
+            Queue<Hex> q = new();
+            Dictionary<Hex, Hex> parent = new();
+            HashSet<Hex> visited = new();
+            List<Hex> targets = new();
+
+            q.Enqueue(farm.location);
+            visited.Add(farm.location);
+            parent[farm.location] = null;
+
+            bool IsAllowed(Hex h) => h.HasLodge() &&
+                (!h.hexLodge.IsBuilt() || h.hexLodge.Controller() == farm); // NEW RULE
+
+            while (q.Count > 0)
+            {
+                Hex cur = q.Dequeue();
+
+                // Reachable hexes WITH matching owner are target endpoints
+                if (cur.HasLodge() && cur.hexLodge.Controller() == farm)
+                    targets.Add(cur);
+
+                foreach (Hex next in graph[cur])
+                {
+                    // DO NOT traverse into a hex with a different non-empty owner
+                    if (!IsAllowed(next))
+                        continue;
+
+                    if (!visited.Contains(next))
+                    {
+                        visited.Add(next);
+                        q.Enqueue(next);
+
+                        // Assign the ONLY parent for shortest path
+                        parent[next] = cur;
+                    }
+                }
+            }
+
+            // -------- Backward collection: collect all hexes on valid paths --------
+
+            Dictionary<Hex, List<Hex>> result = new();
+
+            foreach (Hex t in targets)
+            {
+                result[t] = new();
+                Queue<Hex> back = new();
+                back.Enqueue(t);
+
+                while (back.Count > 0)
+                {
+                    Hex h = back.Dequeue();
+                    result[t].Add(h);
+                    if (parent[h] != null) back.Enqueue(parent[h]);
+                }
+
+                result[t].Reverse();
+            }
+
+            return result;
+
         }
     }
 
@@ -102,13 +252,22 @@ namespace WorldUtil
             this.hexLodge = hexLodge;
         }
 
+        public bool HasDam() => exitDam != null;
+
+        public bool HasLodge() => hexLodge != null;
+
         public int WaterLevel() => _waterLevel;
 
         public bool SetWaterLevel(int level)
         {
+            // Set level if possible
             if (level > BeaverDam.MAX_LVL) return false;
             if (level < 0) return false;
-            else _waterLevel = level; return true;
+            else _waterLevel = level;
+            // Destroy lodge if dried up
+            if (HasLodge() && level == 0 && hexLodge.IsBuilt())
+                hexLodge.Dismantle();
+            return true;
         }
     }
 
@@ -134,11 +293,13 @@ namespace WorldUtil
 
     public class SyrupFarm
     {
+        public readonly string name;
         public readonly Color color;
         public readonly Hex location;
 
-        public SyrupFarm(Color color, Hex location)
+        public SyrupFarm(string name, Color color, Hex location)
         {
+            this.name = name;
             this.color = color;
             this.location = location;
         }

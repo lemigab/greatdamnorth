@@ -45,19 +45,15 @@ public class BeaverDam : MonoBehaviour
         World w = GameWorld.Instance().World();
         Hex at = w.FindHexWithDam(this);
         // see if a downstream dam is larger
-        foreach (Hex h in w.DownstreamFrom(at))
+        foreach (Hex h in w.DownstreamFrom(at, false))
             if (h.exitDam.Level() > _lvl) return;
         // set home hex
-        at.SetWaterLevel(_lvl);
-        Vector3 v = at.waterMesh.transform.position;
-        at.waterMesh.transform.position =
-            new(v.x, dL + _lvl * (LVL_MULT / 2f), v.z);
         // set upstream hexes
-        foreach (Hex h in w.UpstreamFrom(at))
+        foreach (Hex h in w.UpstreamFrom(at, true))
         {
             if (h.exitDam.Level() > _lvl) break;
             h.SetWaterLevel(_lvl);
-            v = h.waterMesh.transform.position;
+            Vector3 v = h.waterMesh.transform.position;
             h.waterMesh.transform.position =
                 new(v.x, dL + _lvl * (LVL_MULT / 2f), v.z);
         }

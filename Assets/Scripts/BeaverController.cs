@@ -1,9 +1,11 @@
 using UnityEngine;
 using UnityEngine.AI;
 using System.Collections;
+using WorldUtil;
 
 public class BeaverController : MonoBehaviour
 {
+    public int syrupFarmId;
 
     public Rigidbody rb;
 
@@ -40,6 +42,15 @@ public class BeaverController : MonoBehaviour
                 branch.SetActive(value);
             }
         }
+    }
+
+
+    public SyrupFarm GetHomeFarm()
+    {
+        World w = GameWorld.Instance().World();
+        if (syrupFarmId >= w.syrupFarms.Count)
+            throw new System.Exception("Not a valid target farm");
+        return w.syrupFarms[syrupFarmId];
     }
 
 
@@ -191,7 +202,7 @@ public class BeaverController : MonoBehaviour
         }
 
         isHoldingBranch = false;
-        
+
         // Smoothly drop AI back down to normal height
         if (isAI && agent != null)
         {
@@ -233,4 +244,4 @@ public class BeaverController : MonoBehaviour
     {
         //Debug.Log("Build lodge");
     }
-} 
+}

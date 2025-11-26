@@ -1,8 +1,12 @@
+using Unity.VisualScripting;
 using UnityEngine;
 using WorldUtil;
 
 public class GameWorld : MonoBehaviour
 {
+    public TradeLeaderboard leaderboard;
+    public BeaverController lordsChosenBeaver;
+
     private static GameWorld _instance;
 
     private World _storedWorld;
@@ -19,7 +23,13 @@ public class GameWorld : MonoBehaviour
     public void SetWaterHeight(float h) => _defaultWaterHeight = h;
     public float DefaultWaterHeight() => _defaultWaterHeight;
 
-    public void AddWorld(World world) => _storedWorld = world;
+    public void AddWorld(World world)
+    {
+        _storedWorld = world;
+        leaderboard.ClearAll();
+        leaderboard.Init(_storedWorld);
+    }
+
     public World World() => _storedWorld;
 
 
