@@ -16,7 +16,7 @@ public class MeshBuilder : MonoBehaviour
     public MeshCollider waterCollider;
     public MeshRenderer landRenderer;
 
-    public Material flatLand, mountainLand;
+    public Material flatLand, hillLand, mountainLand;
 
     public int resolution, scale, seed;
 
@@ -32,11 +32,11 @@ public class MeshBuilder : MonoBehaviour
 
 
     [ContextMenu("Generate")]
-    public Mesh Generate()
-        => GenerateWithFeatures(HexSide.N, HexSide.SE, HexSide.S);
+    public Tuple<Mesh, Mesh> Generate()
+        => GenerateWithFeatures(false, HexSide.N, HexSide.SE, HexSide.S);
 
 
-    public Mesh GenerateWithFeatures(
+    public Tuple<Mesh, Mesh> GenerateWithFeatures(bool forceUpward,
         HexSide river1, HexSide river2, params HexSide[] roads)
     {
         resolution = 1 + resolution - (resolution % 2);
@@ -45,12 +45,13 @@ public class MeshBuilder : MonoBehaviour
         float[,] w = NoiseMap.Export(resolution, 0, 0, 0f, 1, 0f, 0f);
 
         Mesh lMesh = CreateFromNoiseGrid(
-            l, scale, lowPoly, forceHills, river1, river2, roads);
+            l, scale, lowPoly, forceHills,
+            river1, river2, roads, forceUpward, true);
         Mesh wMesh = CreateFromNoiseGrid(
             w, scale, lowPoly, false);
 
-        ApplyMeshes(lMesh, wMesh, DetermineLandMaterial(river1, river2));
-        return lMesh;
+        ApplyMeshes(lMesh, wMesh, LandMaterialFor(river1, river2, forceUpward));
+        return new(lMesh, wMesh);
     }
 
 
@@ -76,7 +77,8 @@ public class MeshBuilder : MonoBehaviour
     // - i.e. a 5x5 array is a 5-row hexagon; ignore the last 2 of row 1.
     private Mesh CreateFromNoiseGrid(
         float[,] grid, float unitSize, bool lowPoly, bool forceEdge,
-        HexSide riverIn, HexSide riverOut, HexSide[] roads)
+        HexSide riverIn, HexSide riverOut, HexSide[] roads,
+        bool upward, bool settle)
     {
         if (grid.GetLength(0) != grid.GetLength(1)
             || grid.GetLength(0) % 2 == 0)
@@ -123,6 +125,8 @@ public class MeshBuilder : MonoBehaviour
                 float biasedAlt = grid[row, pt];
                 // tiles without rivers are hills
                 if (mount) biasedAlt *= 4f;
+                // tiles with upward push have increased elevation
+                else if (upward) biasedAlt *= 2f;
                 // distance to border
                 int distToEdge = Math.Min(
                     Math.Min(pt, rowLen - 1 - pt),
@@ -134,10 +138,11 @@ public class MeshBuilder : MonoBehaviour
                 {
                     float distToRiv = G.DistFromAny(v, cntPos, rOutPos, rInPos);
                     // border verts will be less biased to rivers
-                    if ((distToEdge == 0 && distToRiv < n / 16f)
-                        || (distToEdge != 0 && distToRiv < n / 8f))
-                        biasedAlt = NearRiverLerp(
-                            biasedAlt, distToRiv);
+                    // if upward push turned on, all bias is decreased
+                    bool decBias = distToEdge == 0 || upward;
+                    if ((decBias && distToRiv < n / 16f)
+                        || (!decBias && distToRiv < n / 8f))
+                        biasedAlt = NearRiverLerp(biasedAlt, distToRiv);
                 }
                 // save which vert positions are on a road
                 float pW = G.Lerp(pathWidth, 0f, distToEdge / (float)fn);
@@ -147,7 +152,8 @@ public class MeshBuilder : MonoBehaviour
                 roadRef[row, pt] = roadHere;
                 float roadOff = roadHere ? hillHeight * 0.01f : 0f;
                 // add to vertex list
-                float vh = unitSize * biasedAlt - hillHeight + roadOff;
+                float set = settle ? hillHeight : 0f;
+                float vh = unitSize * biasedAlt - set + roadOff;
                 tempVerts.Add(new Vector3(vx, vh, vy));
                 // track which list element matches the grid location
                 tempGridRef[row, pt] = vCount++;
@@ -230,19 +236,20 @@ public class MeshBuilder : MonoBehaviour
     }
 
 
-    private Material DetermineLandMaterial(HexSide riverIn, HexSide riverOut)
+    private Material LandMaterialFor(
+        HexSide riverIn, HexSide riverOut, bool hill)
     {
-        return
-            (riverIn == HexSide.NULL && riverOut == HexSide.NULL)
-            ? mountainLand
-            : flatLand;
+        if (riverIn == HexSide.NULL && riverOut == HexSide.NULL)
+            return mountainLand;
+        else if (hill) return hillLand;
+        return flatLand;
     }
 
 
     private Mesh CreateFromNoiseGrid(
         float[,] grid, float unitSize, bool lowPoly, bool forceEdge)
         => CreateFromNoiseGrid(grid, unitSize, lowPoly, forceEdge,
-            HexSide.NULL, HexSide.NULL, new HexSide[] { });
+            HexSide.NULL, HexSide.NULL, new HexSide[] { }, false, false);
 
 
     private float HexEdgeLerp(float height, int distFromEdge)

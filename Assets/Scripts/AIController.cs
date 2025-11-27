@@ -50,7 +50,7 @@ public class AIController : BeaverController
     private float actionTimer = 0f;
     private float chewDuration = 0.1f;
     private float buildDuration = 0.1f;
-    private float breakDuration = 0.1f;
+    //private float breakDuration = 0.1f;
 
     // Dams along my river (hexes that have exitDam != null)
     private List<Hex> myRiverDamHexes = new List<Hex>();
@@ -291,7 +291,7 @@ public class AIController : BeaverController
 
         if (actionTimer <= 0f)
         {
-            base.Chew();
+            base.ChewLog();
 
             // --- PRINT WHERE THE BEAVER IS GOING NEXT ---
             if (myRiverDamHexes != null && myRiverDamHexes.Count > 0)
