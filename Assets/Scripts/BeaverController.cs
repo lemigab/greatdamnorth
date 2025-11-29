@@ -4,8 +4,9 @@ using System.Collections;
 using WorldUtil;
 using NUnit.Framework;
 using System.Collections.Generic;
+using Unity.Netcode;
 
-public class BeaverController : MonoBehaviour
+public class BeaverController : NetworkBehaviour
 {
     public int syrupFarmId;
 
@@ -72,12 +73,11 @@ public class BeaverController : MonoBehaviour
         return w.syrupFarms[syrupFarmId];
     }
 
-
     public virtual void Start()
     {
         rb = GetComponent<Rigidbody>();
-        rb.isKinematic = false;
-        rb.useGravity = true;
+        //rb.isKinematic = false;
+        //rb.useGravity = true;
 
         branch = transform.Find("Branch").gameObject;
         isHoldingBranch = false;
@@ -161,10 +161,11 @@ public class BeaverController : MonoBehaviour
     public virtual void Move(Vector3 targetDirection)
     {
         Vector3 moveDirection = targetDirection * moveSpeed;
-        rb.MovePosition(transform.position + moveDirection * Time.deltaTime);
+        // Use fixedDeltaTime since Move() is called from FixedUpdate context
+        rb.MovePosition(transform.position + moveDirection * Time.fixedDeltaTime);
 
         var rotation = Quaternion.LookRotation(targetDirection);
-        rb.MoveRotation(Quaternion.Lerp(transform.rotation, rotation, rotationSpeed * Time.deltaTime));
+        rb.MoveRotation(Quaternion.Lerp(transform.rotation, rotation, rotationSpeed * Time.fixedDeltaTime));
     }
 
     public bool ChewLog()
