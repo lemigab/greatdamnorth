@@ -73,7 +73,7 @@ public class CameraFollowController : MonoBehaviour
     private void OnMouseScroll(InputAction.CallbackContext context)
     {
         scrollDelta = context.ReadValue<Vector2>();
-        Debug.Log("Scroll delta: " + scrollDelta);
+        //Debug.Log("Scroll delta: " + scrollDelta);
     }
     
     void OnDisable()

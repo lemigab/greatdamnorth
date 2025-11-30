@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
@@ -10,6 +11,7 @@ using Random = System.Random;
 using Unity.VisualScripting;
 using static UnityEditor.PlayerSettings;
 using Unity.VisualScripting.Antlr3.Runtime.Tree;
+using Unity.Netcode;
 
 public class WorldBuilder : MonoBehaviour
 {
@@ -23,6 +25,10 @@ public class WorldBuilder : MonoBehaviour
     public GameObject originFarmBucket;
     public GameObject treeContainer;
     public GameObject logContainer;
+    
+    // Optional: Assign log prefab assets directly here instead of using logContainer
+    // If this array has items, it will be used instead of logContainer
+    public GameObject[] logPrefabAssets;
 
     public NavMeshSurface surface;
 
@@ -38,17 +44,61 @@ public class WorldBuilder : MonoBehaviour
 
     private void Start()
     {
-        ConstructMap();
+        if (NetworkManager.Singleton != null)
+        {
+            NetworkManager.Singleton.OnServerStarted += OnServerStarted;
+        }
+        else
+        {
+            StartCoroutine(WaitForNetworkStarted());
+        }
+        //ConstructMap();
         //surface.BuildNavMesh(); // turned off for now
 
     }
 
+    private IEnumerator WaitForNetworkStarted()
+    {
+        while (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsServer)
+        {
+            yield return null;
+        }
+        NetworkManager.Singleton.OnServerStarted += OnServerStarted;
+
+        if (NetworkManager.Singleton.IsServer && NetworkManager.Singleton.IsListening)
+        {
+            OnServerStarted();
+        }
+
+    }
+
+    private void OnServerStarted()
+    {
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
+        {
+            ConstructMap();
+        }
+    }
 
     [ContextMenu("Construct Map")]
     public void ConstructMap()
     {
         // Clean up previous map
+        Debug.Log("Constructing map");
         Clear();
+        
+        // Create NetworkWorld root GameObject for all networked world objects
+        GameObject networkWorld = null;
+        NetworkObject networkWorldNetObj = null;
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && NetworkManager.Singleton.IsListening)
+        {
+            networkWorld = new GameObject("NetworkWorld");
+            networkWorld.transform.SetParent(null); // Parent to scene root
+            networkWorldNetObj = networkWorld.AddComponent<NetworkObject>();
+            networkWorldNetObj.Spawn();
+            Debug.Log($"Created and spawned NetworkWorld root, NetworkObjectId: {networkWorldNetObj.NetworkObjectId}, Parent: {(networkWorld.transform.parent == null ? "Scene Root" : networkWorld.transform.parent.name)}");
+        }
+        
         // Setup World instance
         world.Init();
         // Initialize collection of hex/mound objects
@@ -61,10 +111,8 @@ public class WorldBuilder : MonoBehaviour
         for (int i = 0; i < tcc; i++)
             originTrees[i] = treeContainer.transform.GetChild(i).gameObject;
         // Get log options
-        int lcc = logContainer.transform.childCount;
-        GameObject[] originLogs = new GameObject[lcc];
-        for (int i = 0; i < lcc; i++)
-            originLogs[i] = logContainer.transform.GetChild(i).gameObject;
+        int lcc = logPrefabAssets.Length;
+        GameObject[] originLogs = logPrefabAssets;
         // Get hex mesh geometry
         Random rng = new(originMeshBuilder.seed);
         int originalSeed = originMeshBuilder.seed;
@@ -89,9 +137,35 @@ public class WorldBuilder : MonoBehaviour
                 HexSide[] r = G.RoadSidesOf(truePos, construct);
                 bool f = G.IsRiverSource(truePos, construct);
                 Mesh lM = originMeshBuilder.GenerateWithFeatures(f, uS, dS, r).Item1;
+                Mesh wM = originMeshBuilder.GenerateWithFeatures(f, uS, dS, r).Item2;
                 // copy the reference hex
-                GameObject newLandHex = Instantiate(originLandHex, transform);
+                GameObject newLandHex = Instantiate(originLandHex, networkWorld.transform);
+                newLandHex.GetComponent<MeshFilter>().mesh = lM;
+                newLandHex.GetComponent<MeshCollider>().sharedMesh = lM;
+                
+                if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && NetworkManager.Singleton.IsListening)
+                {
+                    NetworkObject landHexNetObj = newLandHex.GetComponent<NetworkObject>();
+                    if (landHexNetObj != null)
+                    {
+                        landHexNetObj.Spawn();
+                        //Parent to WorldBuilder transform AFTER spawning
+                        newLandHex.transform.SetParent(networkWorld.transform, worldPositionStays: true);
+                    }
+                }
+                
                 GameObject newWaterHex = Instantiate(originWaterHex, transform);
+                // Assign water mesh to MeshFilter before ForceWaterCollider
+                MeshFilter waterMeshFilter = newWaterHex.GetComponent<MeshFilter>();
+                waterMeshFilter.mesh = wM;
+                MeshCollider waterMeshCollider = newWaterHex.GetComponent<MeshCollider>();
+                waterMeshCollider.sharedMesh = wM;
+                //NetworkObject waterHexNetObj = newWaterHex.GetComponent<NetworkObject>();
+                //if (waterHexNetObj != null)
+                //{
+                //    waterHexNetObj.Spawn();
+                //    newWaterHex.transform.SetParent(networkWorld.transform, worldPositionStays: true);
+                //}
                 // place trees on copy
                 bool mount = uS == HexSide.NULL && dS == HexSide.NULL;
                 if (!mount) BuildTileTrees(newLandHex, originTrees, originLogs,
@@ -112,7 +186,13 @@ public class WorldBuilder : MonoBehaviour
                 if (dS != HexSide.NULL)
                 {
                     GameObject newDam = Instantiate(
-                        originDam.gameObject, transform);
+                        originDam.gameObject, networkWorld.transform);
+                        NetworkObject damNetObj = newDam.GetComponent<NetworkObject>();
+                        if (damNetObj != null)
+                        {
+                            damNetObj.Spawn();
+                            newDam.transform.SetParent(networkWorld.transform, worldPositionStays: true);
+                        }
                     Vector2 damPos = G.EquivHexPos(dS, hexW);
                     newDam.transform.position = new(
                         pos.x + damPos.x,
@@ -260,10 +340,36 @@ public class WorldBuilder : MonoBehaviour
             if (v.y < lowest || v.y > lowest / 4f) continue;
             if (logCnt++ >= maxLogs) break;
             Vector3 placeAt = new(v.x, v.y + buildHeight, v.z);
-            GameObject log = Instantiate(
-               logs[rng.Next(logs.Length)], tile.transform);
+            GameObject logPrefab = logs[rng.Next(logs.Length)];
+            Debug.Log($"Instantiating log prefab: {logPrefab.name}, Has NetworkObject: {logPrefab.GetComponent<NetworkObject>() != null}");
+            
+            // Instantiate without parent first, set world position
+            GameObject log = Instantiate(logPrefab);
             log.transform.position = placeAt;
-            log.name = "Log" + placedTrees.Count;
+            log.name = "Log " + placedTrees.Count;
+
+            // Only spawn on server when network is ready
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && NetworkManager.Singleton.IsListening)
+            {
+                NetworkObject logNetObj = log.GetComponent<NetworkObject>();
+                if (logNetObj == null)
+                {
+                    Debug.LogWarning($"Log {log.name} doesn't have NetworkObject component! Prefab: {logPrefab.name}");
+                }
+                else
+                {
+                    // Spawn first, then set parent (with worldPositionStays to preserve position)
+                    logNetObj.Spawn();
+                    // Set parent AFTER spawn to avoid NetworkObject unparenting it
+                    log.transform.SetParent(tile.transform, worldPositionStays: true);
+                    log.transform.position = placeAt;
+                    Debug.Log($"{log.name} spawned - Active: {log.activeSelf}, Position: {log.transform.position}, NetworkObjectId: {logNetObj.NetworkObjectId}, Prefab: {logPrefab.name}, Parent: {log.transform.parent?.name}");
+                }
+            }
+            else
+            {
+                Debug.LogWarning($"Cannot spawn log - IsServer: {NetworkManager.Singleton?.IsServer}, IsListening: {NetworkManager.Singleton?.IsListening}");
+            }
         }
         if (isFarm)
         {
