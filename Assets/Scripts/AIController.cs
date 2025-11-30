@@ -376,19 +376,18 @@ public class AIController : BeaverController
             // Get current dam (based on currentDamBuildIndex)
             BeaverDam dam = null;
             if (myRiverDamHexes != null &&
-                currentDamBuildIndex >= 0 &&
-                currentDamBuildIndex < myRiverDamHexes.Count)
+                currentDamBuildIndex >= 0)
             {
                 Hex hex = myRiverDamHexes[currentDamBuildIndex];
                 if (hex != null)
                     dam = hex.exitDam;
             }
 
-            // Only try to build if this dam isn't already full
+            // Only try to break if this dam isn't empty
             if (dam != null && dam.Level() > 0)
             {
                 // This should call BeaverController's logic which should in turn
-                // call dam.Increment() internally (or do equivalent).
+                // call dam.Decrement() internally (or do equivalent).
                 base.BreakDam();
             }
 
