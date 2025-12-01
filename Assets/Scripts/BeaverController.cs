@@ -188,19 +188,17 @@ public class BeaverController : NetworkBehaviour
     [Rpc(SendTo.Server)]
     public void ChewLogServerRpc()
     {
+        Debug.Log("BeaverController ChewLogServerRpc: isNearLog=" + isNearLog + ", isHoldingBranch=" + isHoldingBranch + ", currentLog=" + currentLog);
         if (isNearLog && !isHoldingBranch && currentLog != null)
         {
             // Despawn the log so it disappears on all clients
             NetworkObject logNetObj = currentLog.GetComponent<NetworkObject>();
-            if (logNetObj != null)
+            if (logNetObj != null && logNetObj.IsSpawned)
             {
-                Debug.Log("Despawning log: " + logNetObj.name);
-                logNetObj.Despawn();
-            }
-            else
-            {
-                // Fallback for non-networked logs (editor-created, etc.)
-                currentLog.SetActive(false);
+                logNetObj.Despawn(true);
+                //currentLog.SetActive(false);
+                
+                Debug.Log($"Log {logNetObj.name} despawned. IsSpawned after despawn: {logNetObj.IsSpawned}");
             }
             isHoldingBranch = true;
             currentLog = null;
@@ -210,8 +208,10 @@ public class BeaverController : NetworkBehaviour
     // Keep this for backwards compatibility, but it now calls ServerRpc
     public bool ChewLog()
     {
+        Debug.Log("BeaverController ChewLog: isNearLog=" + isNearLog + ", isHoldingBranch=" + isHoldingBranch + ", currentLog=" + currentLog);
         if (isNearLog && !isHoldingBranch && currentLog != null)
         {
+            Debug.Log("BeaverController ChewLog: calling ChewLogServerRpc");
             ChewLogServerRpc();
             return true;
         }

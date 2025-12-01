@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 126417847841499064}
   - component: {fileID: 1390081339332650194}
   - component: {fileID: -5727247520553813175}
+  - component: {fileID: -2462129846953536818}
   m_Layer: 0
   m_Name: Log 58
   m_TagString: Tree
@@ -138,3 +139,16 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
+--- !u!114 &-2462129846953536818
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6081743120183283060}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f56301312b6bc4b429e91dc68b88695d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LogDespawnDebugger
+  ShowTopMostFoldoutHeaderGroup: 1

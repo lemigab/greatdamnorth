@@ -24,7 +24,7 @@ public class WorldBuilder : MonoBehaviour
     public GameObject originFarmHouse;
     public GameObject originFarmBucket;
     public GameObject treeContainer;
-    public GameObject logContainer;
+    //public GameObject logContainer;
     
     // Optional: Assign log prefab assets directly here instead of using logContainer
     // If this array has items, it will be used instead of logContainer
@@ -87,8 +87,17 @@ public class WorldBuilder : MonoBehaviour
     [ContextMenu("Construct Map")]
     public void ConstructMap()
     {
+        // Only construct map on server - clients receive the world via network sync
+        if (NetworkManager.Singleton != null && !NetworkManager.Singleton.IsServer)
+        {
+            Debug.LogWarning("ConstructMap called on client! This should only run on the server. Clients receive the world via network sync.");
+            return;
+        }
+        
         // Clean up previous map
-        Debug.Log("Constructing map");
+        Debug.Log($"[SERVER] Constructing map - IsServer: {NetworkManager.Singleton?.IsServer}, IsListening: {NetworkManager.Singleton?.IsListening}");
+        // Reset global log counter for unique naming
+        globalLogCounter = 0;
         Clear();
         
         // Create NetworkWorld root GameObject for all networked world objects
@@ -103,7 +112,7 @@ public class WorldBuilder : MonoBehaviour
             networkWorld.name = "NetworkWorld";
             NetworkObject networkWorldNetObj = networkWorld.GetComponent<NetworkObject>();
             networkWorldNetObj.Spawn();
-            Debug.Log($"Created and spawned NetworkWorld root, NetworkObjectId: {networkWorldNetObj.NetworkObjectId}, Position: {networkWorld.transform.position}, Parent: {(networkWorld.transform.parent == null ? "Scene Root" : networkWorld.transform.parent.name)}");
+            Debug.Log($"[SERVER] Created and spawned NetworkWorld root, NetworkObjectId: {networkWorldNetObj.NetworkObjectId}, IsSpawned: {networkWorldNetObj.IsSpawned}, Position: {networkWorld.transform.position}, Parent: {(networkWorld.transform.parent == null ? "Scene Root" : networkWorld.transform.parent.name)}, ConnectedClients: {NetworkManager.Singleton.ConnectedClients.Count}");
         }
         
         // Setup World instance
@@ -318,6 +327,9 @@ public class WorldBuilder : MonoBehaviour
     }
 
 
+    // Global counter for unique log naming across all tiles
+    private static int globalLogCounter = 0;
+
     private void BuildTileTrees(
         GameObject tile, GameObject[] trees, GameObject[] logs,
         Mesh landMesh, int randSeed, float buildHeight, bool isFarm)
@@ -341,6 +353,7 @@ public class WorldBuilder : MonoBehaviour
         Shuffle(shufLocations, rng);
         int logCnt = 0;
         int maxLogs = isFarm ? 0 : forestSize;
+        List<GameObject> placedLogs = new();
         foreach (Vector3 v in shufLocations)
         {
             float lowest = -(originMeshBuilder.hillHeight - waterHeight);
@@ -353,7 +366,8 @@ public class WorldBuilder : MonoBehaviour
             // Instantiate without parent first, set world position
             GameObject log = Instantiate(logPrefab);
             log.transform.position = placeAt;
-            log.name = "Log " + placedTrees.Count;
+            log.name = "Log " + placedLogs.Count;
+            placedLogs.Add(log);
 
             // Only spawn on server when network is ready
             if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && NetworkManager.Singleton.IsListening)

@@ -131,6 +131,7 @@ public class PlayerController : BeaverController
 
     public void OnChew(InputAction.CallbackContext context) {
         if (context.performed) {
+            Debug.Log("PlayerController OnChew: performed");
             // we can have all chew options here
             // since only one will actually succeed
             if (BreakMound()) return;
