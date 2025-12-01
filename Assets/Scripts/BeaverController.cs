@@ -73,6 +73,23 @@ public class BeaverController : NetworkBehaviour
         return w.syrupFarms[syrupFarmId];
     }
 
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+        
+        // Give beaver a unique name based on client ID and ownership
+        if (IsOwner)
+        {
+            gameObject.name = $"PlayerBeaver-{OwnerClientId}";
+        }
+        else
+        {
+            gameObject.name = $"Beaver-{OwnerClientId}-{NetworkObjectId}";
+        }
+        
+        Debug.Log($"[BeaverController] OnNetworkSpawn - Name: {gameObject.name}, Position: {transform.position}, IsOwner: {IsOwner}, IsServer: {IsServer}, IsClient: {IsClient}, NetworkObjectId: {NetworkObjectId}, OwnerClientId: {OwnerClientId}");
+    }
+
     public virtual void Start()
     {
         rb = GetComponent<Rigidbody>();

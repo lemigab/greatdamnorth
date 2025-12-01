@@ -29,6 +29,10 @@ public class WorldBuilder : MonoBehaviour
     // Optional: Assign log prefab assets directly here instead of using logContainer
     // If this array has items, it will be used instead of logContainer
     public GameObject[] logPrefabAssets;
+    
+    // NetworkWorld prefab - create an empty GameObject with NetworkObject component as a prefab
+    // and assign it here. If null, will create at runtime (may cause GlobalObjectIdHash issues)
+    public GameObject networkWorldPrefab;
 
     public NavMeshSurface surface;
 
@@ -88,15 +92,18 @@ public class WorldBuilder : MonoBehaviour
         Clear();
         
         // Create NetworkWorld root GameObject for all networked world objects
+
+        //NetworkObject networkWorldNetObj = networkWorldPrefab.GetComponent<NetworkObject>();
         GameObject networkWorld = null;
-        NetworkObject networkWorldNetObj = null;
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer && NetworkManager.Singleton.IsListening)
         {
-            networkWorld = new GameObject("NetworkWorld");
+            networkWorld = Instantiate(networkWorldPrefab);
             networkWorld.transform.SetParent(null); // Parent to scene root
-            networkWorldNetObj = networkWorld.AddComponent<NetworkObject>();
+            networkWorld.transform.position = Vector3.zero; // Ensure NetworkWorld is at origin
+            networkWorld.name = "NetworkWorld";
+            NetworkObject networkWorldNetObj = networkWorld.GetComponent<NetworkObject>();
             networkWorldNetObj.Spawn();
-            Debug.Log($"Created and spawned NetworkWorld root, NetworkObjectId: {networkWorldNetObj.NetworkObjectId}, Parent: {(networkWorld.transform.parent == null ? "Scene Root" : networkWorld.transform.parent.name)}");
+            Debug.Log($"Created and spawned NetworkWorld root, NetworkObjectId: {networkWorldNetObj.NetworkObjectId}, Position: {networkWorld.transform.position}, Parent: {(networkWorld.transform.parent == null ? "Scene Root" : networkWorld.transform.parent.name)}");
         }
         
         // Setup World instance
@@ -154,18 +161,18 @@ public class WorldBuilder : MonoBehaviour
                     }
                 }
                 
-                GameObject newWaterHex = Instantiate(originWaterHex, transform);
+                GameObject newWaterHex = Instantiate(originWaterHex, networkWorld.transform);
                 // Assign water mesh to MeshFilter before ForceWaterCollider
                 MeshFilter waterMeshFilter = newWaterHex.GetComponent<MeshFilter>();
                 waterMeshFilter.mesh = wM;
                 MeshCollider waterMeshCollider = newWaterHex.GetComponent<MeshCollider>();
                 waterMeshCollider.sharedMesh = wM;
-                //NetworkObject waterHexNetObj = newWaterHex.GetComponent<NetworkObject>();
-                //if (waterHexNetObj != null)
-                //{
-                //    waterHexNetObj.Spawn();
-                //    newWaterHex.transform.SetParent(networkWorld.transform, worldPositionStays: true);
-                //}
+                NetworkObject waterHexNetObj = newWaterHex.GetComponent<NetworkObject>();
+                if (waterHexNetObj != null)
+                {
+                    waterHexNetObj.Spawn();
+                    newWaterHex.transform.SetParent(networkWorld.transform, worldPositionStays: true);
+                }
                 // place trees on copy
                 bool mount = uS == HexSide.NULL && dS == HexSide.NULL;
                 if (!mount) BuildTileTrees(newLandHex, originTrees, originLogs,
@@ -358,6 +365,8 @@ public class WorldBuilder : MonoBehaviour
                 }
                 else
                 {
+                    // Check GlobalObjectIdHash before spawning
+                    
                     // Spawn first, then set parent (with worldPositionStays to preserve position)
                     logNetObj.Spawn();
                     // Set parent AFTER spawn to avoid NetworkObject unparenting it

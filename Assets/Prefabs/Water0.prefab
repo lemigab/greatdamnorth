@@ -13,8 +13,8 @@ GameObject:
   - component: {fileID: 7336428787391322733}
   - component: {fileID: 2043505022401220906}
   - component: {fileID: 5232997444514629567}
-  - component: {fileID: 9020121317984656578}
-  - component: {fileID: 9183330927880888636}
+  - component: {fileID: 4439448788330409584}
+  - component: {fileID: -6459536281378740665}
   m_Layer: 4
   m_Name: Water0
   m_TagString: Untagged
@@ -135,7 +135,7 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 0}
---- !u!114 &9020121317984656578
+--- !u!114 &4439448788330409584
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -147,7 +147,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 3265429926
+  GlobalObjectIdHash: 1413279214
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -160,7 +160,7 @@ MonoBehaviour:
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
---- !u!114 &9183330927880888636
+--- !u!114 &-6459536281378740665
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
