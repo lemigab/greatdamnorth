@@ -304,7 +304,7 @@ public class WorldBuilder : MonoBehaviour
                 Hex targ = hexes[river[i]];
                 hs.Add(targ);
                 if (i == 0) wFarms.Add(
-                    new("Farm" + farmCnt++, Color.white, targ));
+                    new("Player " + farmCnt++, Color.white, targ));
             }
             wRivers.Add(hs);
         }

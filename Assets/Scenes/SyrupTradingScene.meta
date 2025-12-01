@@ -1,6 +1,10 @@
 fileFormatVersion: 2
+<<<<<<<< HEAD:Assets/Scenes/SyrupTradingScene.meta
 guid: b0045e857172ef449a531338237bb2ab
 folderAsset: yes
+========
+guid: 9fce41e8f715cd44d94976cce92f0ae5
+>>>>>>>> multiplayer-v2:Assets/Scenes/MapGeneratorScene.unity.meta
 DefaultImporter:
   externalObjects: {}
   userData: 

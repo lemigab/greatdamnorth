@@ -25,6 +25,10 @@ public class BoatSpawner : MonoBehaviour
         if (!spawnerOn) return;
         if (frameCount++ % spawnInterval != 0) return;
 
+        // Safety assurance
+        if (GameWorld.Instance() == null) return;
+        if (GameWorld.Instance().World() == null) return;
+
         // Summon a PreviewBoat at each syrup farm location
         // The boat will autonomously travel downstream
         //   so from here we can just let it do its thing
