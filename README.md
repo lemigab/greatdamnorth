@@ -4,35 +4,36 @@
 
 This assignment expands on the generated world from A3 by allowing multiple players within a single game session, competing with each other for higher score. Additionally, the game itself and all essential play mechanics have been implemented.
 
-### Multiplayer Testing Guide
+## Multiplayer Testing Guide
 
 #### Initial Setup
-1. Open Multiplayer Tools: Click Window → Multiplayer → Multiplayer Play Mode. This opens the Multiplayer Play Mode window
+1. Open Multiplayer Tools: Click Window → Multiplayer → Multiplayer Play Mode. This opens the Multiplayer Play Mode window.
 
-2. Configure Virtual Players: In the Multiplayer Play Mode window, you can set up virtual Unity GUIs to test multiplayer. Check the checkbox for each player you want (e.g., check 2 boxes for 2 players). Press Yes if prompted to build
+2. Configure Virtual Players: In the Multiplayer Play Mode window, you can set up virtual Unity GUIs to test multiplayer. Check the checkbox for each player you want (e.g., check 2 boxes for 2 players). Press Yes if prompted to build.
 
-3. Wait for Setup: Wait for the GUI to load and initialize
+3. Wait for Setup: Wait for the GUI to load and initialize.
 
 #### Starting the Host
-4. Start Main Unity GUI: Press Play on the main Unity GUI (the original Game window)
+4. Start Main Unity GUI: Press Play on the main Unity GUI (the original Game window).
 
-5. Start Host Server: In the Hierarchy, find DontDestroyOnLoad → NetworkManager.
-Select the NetworkManager GameObject. In the Inspector, click "Start Host" button
-The world will be constructed and beavers will spawn
+5. Start Host Server: In the Hierarchy, find DontDestroyOnLoad → NetworkManager. Select the NetworkManager GameObject. In the Inspector, click "Start Host" button. The world will be constructed and beavers will spawn.
 
 #### Connecting a Client
 6. Open Virtual Unity GUI: In the virtual Unity GUI window, click Layout dropdown. Check Hierarchy and Inspector to view them.
 
-7. Connect Client: In the Hierarchy, find NetworkManager. Select the NetworkManager GameObject In the Inspector, click "Start Client" button. You should now be connected to the host server
+7. Connect Client: In the Hierarchy, find NetworkManager. Select the NetworkManager GameObject. In the Inspector, click "Start Client" button. You should now be connected to the host server.
 
-8. Verification: Both windows should show the same world. Both players should see each other's beavers. Test log chewing, dam building, and other multiplayer features
+8. Verification: Both windows should show the same world. Both players should see each other's beavers. Test log chewing, dam building, and other multiplayer features.
+
+
+#### Branch Details
+- The main (and the releases/gdn-multiplayer) branches have the most up-to-date game version. Go to MultiPlayerScene in either of these and follow the above steps.
+- For archive of the product from A3, see PathFindingDemoScene in releases/a3-archive.
+- For a singleplayer version of the game with AI instead of multiplayer, see SyrupTradingScene in releases/gdn-singeplayer.
 
 ## Demo Video
 - [Video Link](https://drive.google.com/file/d/1ZDnWCCWZCOHQEjJAoA-CBs207-exMHxl/view?usp=sharing)
 
-## Scene Instructions
-- The unity scene to load to view the game scene is PathfindingDemoScene
-- MapPainter contains the generated world all the outside object are the templates to generate from
 
 ## CISC 486 Group 18
 - Owen Meima (21owm1)
@@ -108,7 +109,7 @@ The core gameplay involves you playing as a beaver who wants to export his farme
 
 ## AI System
 
-The AI System implemented in A3 has been preserved during the implementation of the multiplayer framework. A link to the README of that assignment, which described all FSM states/transitions and other AI components, may be accessed with the link below. A singleplayer version of the game including AIs is located in SyrupFarmingScene in this branch.
+The AI System implemented in A3 has been replaced by a multiplayer system, since AIs in previous assingments were meant to supplement the lack of multiplayer network capabilties. A link to the README of that assignment, which described all FSM states/transitions and other AI components, may be accessed with the link below.
 
 [View Assignment 3 README](PreviousAssignments/A3_README.md)
 
