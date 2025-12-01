@@ -82,7 +82,7 @@
                     "name": "Sprint",
                     "type": "Button",
                     "id": "641cd816-40e6-41b4-8c3d-04687c349290",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
@@ -97,7 +97,7 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "BreakDam",
+                    "name": "Build",
                     "type": "Button",
                     "id": "191c383d-b742-4938-8521-805876e26e0e",
                     "expectedControlType": "",
@@ -506,11 +506,11 @@
                 {
                     "name": "",
                     "id": "d59b032b-b859-485f-9bf5-9230e89bac3d",
-                    "path": "<Keyboard>/c",
+                    "path": "<Keyboard>/e",
                     "interactions": "",
                     "processors": "",
                     "groups": ";Keyboard&Mouse",
-                    "action": "BreakDam",
+                    "action": "Build",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

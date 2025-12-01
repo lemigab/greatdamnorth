@@ -168,7 +168,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""name"": ""Sprint"",
                     ""type"": ""Button"",
                     ""id"": ""641cd816-40e6-41b4-8c3d-04687c349290"",
-                    ""expectedControlType"": ""Button"",
+                    ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
@@ -183,7 +183,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""BreakDam"",
+                    ""name"": ""Build"",
                     ""type"": ""Button"",
                     ""id"": ""191c383d-b742-4938-8521-805876e26e0e"",
                     ""expectedControlType"": """",
@@ -592,11 +592,11 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                 {
                     ""name"": """",
                     ""id"": ""d59b032b-b859-485f-9bf5-9230e89bac3d"",
-                    ""path"": ""<Keyboard>/c"",
+                    ""path"": ""<Keyboard>/e"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": "";Keyboard&Mouse"",
-                    ""action"": ""BreakDam"",
+                    ""action"": ""Build"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -1222,7 +1222,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         m_Player_Next = m_Player.FindAction("Next", throwIfNotFound: true);
         m_Player_Sprint = m_Player.FindAction("Sprint", throwIfNotFound: true);
         m_Player_Chew = m_Player.FindAction("Chew", throwIfNotFound: true);
-        m_Player_BreakDam = m_Player.FindAction("BreakDam", throwIfNotFound: true);
+        m_Player_Build = m_Player.FindAction("Build", throwIfNotFound: true);
         // UI
         m_UI = asset.FindActionMap("UI", throwIfNotFound: true);
         m_UI_Navigate = m_UI.FindAction("Navigate", throwIfNotFound: true);
@@ -1330,7 +1330,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
     private readonly InputAction m_Player_Next;
     private readonly InputAction m_Player_Sprint;
     private readonly InputAction m_Player_Chew;
-    private readonly InputAction m_Player_BreakDam;
+    private readonly InputAction m_Player_Build;
     /// <summary>
     /// Provides access to input actions defined in input action map "Player".
     /// </summary>
@@ -1383,9 +1383,9 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// </summary>
         public InputAction @Chew => m_Wrapper.m_Player_Chew;
         /// <summary>
-        /// Provides access to the underlying input action "Player/BreakDam".
+        /// Provides access to the underlying input action "Player/Build".
         /// </summary>
-        public InputAction @BreakDam => m_Wrapper.m_Player_BreakDam;
+        public InputAction @Build => m_Wrapper.m_Player_Build;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -1442,9 +1442,9 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Chew.started += instance.OnChew;
             @Chew.performed += instance.OnChew;
             @Chew.canceled += instance.OnChew;
-            @BreakDam.started += instance.OnBreakDam;
-            @BreakDam.performed += instance.OnBreakDam;
-            @BreakDam.canceled += instance.OnBreakDam;
+            @Build.started += instance.OnBuild;
+            @Build.performed += instance.OnBuild;
+            @Build.canceled += instance.OnBuild;
         }
 
         /// <summary>
@@ -1486,9 +1486,9 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Chew.started -= instance.OnChew;
             @Chew.performed -= instance.OnChew;
             @Chew.canceled -= instance.OnChew;
-            @BreakDam.started -= instance.OnBreakDam;
-            @BreakDam.performed -= instance.OnBreakDam;
-            @BreakDam.canceled -= instance.OnBreakDam;
+            @Build.started -= instance.OnBuild;
+            @Build.performed -= instance.OnBuild;
+            @Build.canceled -= instance.OnBuild;
         }
 
         /// <summary>
@@ -1956,12 +1956,12 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnChew(InputAction.CallbackContext context);
         /// <summary>
-        /// Method invoked when associated input action "BreakDam" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// Method invoked when associated input action "Build" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-        void OnBreakDam(InputAction.CallbackContext context);
+        void OnBuild(InputAction.CallbackContext context);
     }
     /// <summary>
     /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "UI" which allows adding and removing callbacks.

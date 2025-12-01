@@ -50,7 +50,7 @@ public class AIController : BeaverController
     private float actionTimer = 0f;
     private float chewDuration = 0.1f;
     private float buildDuration = 0.1f;
-    private float breakDuration = 0.1f;
+    //private float breakDuration = 0.1f;
 
     // Dams along my river (hexes that have exitDam != null)
     private List<Hex> myRiverDamHexes = new List<Hex>();
@@ -291,7 +291,7 @@ public class AIController : BeaverController
 
         if (actionTimer <= 0f)
         {
-            base.Chew();
+            base.ChewLog();
 
             // --- PRINT WHERE THE BEAVER IS GOING NEXT ---
             if (myRiverDamHexes != null && myRiverDamHexes.Count > 0)
@@ -376,19 +376,18 @@ public class AIController : BeaverController
             // Get current dam (based on currentDamBuildIndex)
             BeaverDam dam = null;
             if (myRiverDamHexes != null &&
-                currentDamBuildIndex >= 0 &&
-                currentDamBuildIndex < myRiverDamHexes.Count)
+                currentDamBuildIndex >= 0)
             {
                 Hex hex = myRiverDamHexes[currentDamBuildIndex];
                 if (hex != null)
                     dam = hex.exitDam;
             }
 
-            // Only try to build if this dam isn't already full
+            // Only try to break if this dam isn't empty
             if (dam != null && dam.Level() > 0)
             {
                 // This should call BeaverController's logic which should in turn
-                // call dam.Increment() internally (or do equivalent).
+                // call dam.Decrement() internally (or do equivalent).
                 base.BreakDam();
             }
 
@@ -637,13 +636,11 @@ public class AIController : BeaverController
             Transform land = hex.landMesh.transform;
 
             // look for child objects whose name starts with "Log"
-            foreach (Transform child in land)
+            
+            foreach (GameObject log in hex.logs)
             {
-                if (child.name.StartsWith("Log", System.StringComparison.OrdinalIgnoreCase))
-                {
-                    myRiverTrees.Add(child.gameObject);
-                    break; // one tree per tile, so we can stop after first match
-                }
+                myRiverTrees.Add(log);
+
             }
         }
 

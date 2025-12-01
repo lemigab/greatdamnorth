@@ -1,14 +1,19 @@
 using UnityEngine;
 using UnityEngine.AI;
 using System.Collections;
+using WorldUtil;
+using NUnit.Framework;
+using System.Collections.Generic;
+using Unity.Netcode;
 
-public class BeaverController : MonoBehaviour
+public class BeaverController : NetworkBehaviour
 {
+    public int syrupFarmId;
 
     public Rigidbody rb;
 
-    public float moveSpeed = 5f;
-    public float rotationSpeed = 10f;
+    public float moveSpeed = 10f;
+    public float rotationSpeed = 20f;
 
     private bool _isNearLog = false;
     public bool isNearLog
@@ -16,6 +21,7 @@ public class BeaverController : MonoBehaviour
         get { return _isNearLog; }
         set { _isNearLog = value; }
     }
+
     private bool _isNearDam = false;
     public bool isNearDam
     {
@@ -23,8 +29,24 @@ public class BeaverController : MonoBehaviour
         set { _isNearDam = value; }
     }
 
+    private bool _isNearMound = false;
+    public bool isNearMound
+    {
+        get { return _isNearMound; }
+        set { _isNearMound = value; }
+    }
+
+    private bool _isNearLodge = false;
+    public bool isNearLodge
+    {
+        get { return _isNearLodge; }
+        set { _isNearLodge = value; }
+    }
+
     public GameObject currentDam = null;
     public GameObject currentLog = null;
+    public GameObject currentMound = null;
+    public GameObject currentLodge = null;
     private GameObject branch;
 
     private bool _isHoldingBranch = false;
@@ -37,17 +59,46 @@ public class BeaverController : MonoBehaviour
             if (branch != null)
             {
                 //Debug.Log("Setting branch active: " + value);
-                branch.SetActive(value);
+                if (value && branch.GetComponent<NetworkObject>().IsSpawned) {
+                    branch.GetComponent<NetworkObject>().Despawn();
+                } else if (!value && !branch.GetComponent<NetworkObject>().IsSpawned) {
+                    branch.GetComponent<NetworkObject>().Spawn();
+                }
             }
         }
     }
 
 
+    public SyrupFarm GetHomeFarm()
+    {
+        World w = GameWorld.Instance().World();
+        if (syrupFarmId >= w.syrupFarms.Count)
+            throw new System.Exception("Not a valid target farm");
+        return w.syrupFarms[syrupFarmId];
+    }
+
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+        
+        // Give beaver a unique name based on client ID and ownership
+        if (IsOwner)
+        {
+            gameObject.name = $"PlayerBeaver-{OwnerClientId}";
+        }
+        else
+        {
+            gameObject.name = $"Beaver-{OwnerClientId}-{NetworkObjectId}";
+        }
+        
+        Debug.Log($"[BeaverController] OnNetworkSpawn - Name: {gameObject.name}, Position: {transform.position}, IsOwner: {IsOwner}, IsServer: {IsServer}, IsClient: {IsClient}, NetworkObjectId: {NetworkObjectId}, OwnerClientId: {OwnerClientId}");
+    }
+
     public virtual void Start()
     {
         rb = GetComponent<Rigidbody>();
-        rb.isKinematic = false;
-        rb.useGravity = true;
+        //rb.isKinematic = false;
+        //rb.useGravity = true;
 
         branch = transform.Find("Branch").gameObject;
         isHoldingBranch = false;
@@ -79,6 +130,16 @@ public class BeaverController : MonoBehaviour
             moveSpeed = 8f;
             //Debug.Log("On water: " + other.gameObject.name + " " + moveSpeed.ToString());
         }
+        if (other.gameObject.name.StartsWith("Mound"))
+        {
+            isNearMound = true;
+            currentMound = other.gameObject;
+        }
+        if (other.gameObject.name.StartsWith("Lodge"))
+        {
+            isNearLodge = true;
+            currentLodge = other.gameObject;
+        }
     }
 
     void OnTriggerExit(Collider other)
@@ -106,40 +167,98 @@ public class BeaverController : MonoBehaviour
             moveSpeed = 4f;
             //Debug.Log("On land: " + other.gameObject.name + " " + moveSpeed.ToString());
         }
+        if (other.gameObject.name.StartsWith("Mound"))
+        {
+            isNearMound = false;
+            currentMound = null;
+        }
+        if (other.gameObject.name.StartsWith("Lodge"))
+        {
+            isNearLodge = false;
+            currentLodge = null;
+        }
     }
 
     public virtual void Move(Vector3 targetDirection)
     {
         Vector3 moveDirection = targetDirection * moveSpeed;
-        rb.MovePosition(transform.position + moveDirection * Time.deltaTime);
+        // Use fixedDeltaTime since Move() is called from FixedUpdate context
+        rb.MovePosition(transform.position + moveDirection * Time.fixedDeltaTime);
 
         var rotation = Quaternion.LookRotation(targetDirection);
-        rb.MoveRotation(Quaternion.Lerp(transform.rotation, rotation, rotationSpeed * Time.deltaTime));
+        rb.MoveRotation(Quaternion.Lerp(transform.rotation, rotation, rotationSpeed * Time.fixedDeltaTime));
     }
 
-    public void Chew()
+    [Rpc(SendTo.Server)]
+    public void ChewLogServerRpc()
     {
+        Debug.Log("BeaverController ChewLogServerRpc: isNearLog=" + isNearLog + ", isHoldingBranch=" + isHoldingBranch + ", currentLog=" + currentLog);
         if (isNearLog && !isHoldingBranch && currentLog != null)
         {
-            currentLog.SetActive(false);
+            // Despawn the log so it disappears on all clients
+            NetworkObject logNetObj = currentLog.GetComponent<NetworkObject>();
+            if (logNetObj != null && logNetObj.IsSpawned)
+            {
+                Debug.Log($"Despawning log: {logNetObj.name}, NetworkObjectId: {logNetObj.NetworkObjectId}");
+                logNetObj.Despawn(true); // Destroy the GameObject immediately
+                
+                Debug.Log($"Log {logNetObj.name} despawned. IsSpawned after despawn: {logNetObj.IsSpawned}");
+            }
+            else
+            {
+                Debug.LogWarning($"Cannot despawn log: logNetObj={logNetObj}, IsSpawned={logNetObj?.IsSpawned}");
+            }
             isHoldingBranch = true;
             currentLog = null;
         }
     }
 
-    public void BuildDam()
+    // Keep this for backwards compatibility, but it now calls ServerRpc
+    public bool ChewLog()
+    {
+        Debug.Log("BeaverController ChewLog: isNearLog=" + isNearLog + ", isHoldingBranch=" + isHoldingBranch + ", currentLog=" + currentLog);
+        if (isNearLog && !isHoldingBranch && currentLog != null)
+        {
+            Debug.Log("BeaverController ChewLog: calling ChewLogServerRpc");
+            ChewLogServerRpc();
+            return true;
+        }
+        return false;
+    }
+
+    public bool BuildDam()
     {
         // Only start if we *currently* can build
         if (currentDam == null || !isHoldingBranch)
-            return;
+            return false;
 
         // Capture the dam we’re building on right now
         BeaverDam dam = currentDam.GetComponent<BeaverDam>();
         if (dam == null)
-            return;
+            return false;
 
-        StartCoroutine(BuildDamSequence(dam));
+        // Remove this part if you are putting the corountine back in
+        dam.Increment();
+        Vector3 offset = new(0f, dam.OffsetPerLevel() + 0.01f, 0f);
+        World w = GameWorld.Instance().World();
+        List<Hex> ups = w.UpstreamFrom(w.FindHexWithDam(dam), true);
+        foreach (BeaverController b in GameWorld.Instance().allBeavers)
+        {
+            foreach (Hex h in ups)
+            {
+                Vector3 bPos = b.gameObject.transform.position;
+                if (h.landMesh.GetComponent<MeshRenderer>().bounds.Contains(bPos))
+                    b.gameObject.transform.position = bPos + offset;
+            }
+        }
+
+        isHoldingBranch = false;
+
+        // StartCoroutine(BuildDamSequence(dam));
+        return true;
     }
+
+    // UNUSED for A4 since there are no AIs
     private IEnumerator BuildDamSequence(BeaverDam dam)
     {
         NavMeshAgent agent = null;
@@ -191,7 +310,7 @@ public class BeaverController : MonoBehaviour
         }
 
         isHoldingBranch = false;
-        
+
         // Smoothly drop AI back down to normal height
         if (isAI && agent != null)
         {
@@ -217,20 +336,64 @@ public class BeaverController : MonoBehaviour
         }
     }
 
-    public void BreakDam()
+    public bool BreakDam()
     {
 
-        if (currentDam != null)
+        if (currentDam != null && !isHoldingBranch)
         {
             //Debug.Log("Break dam: " + currentDam.name);
             currentDam.GetComponent<BeaverDam>().Decrement();
             isHoldingBranch = true;
+            return true;
         }
+        return false;
     }
 
-    // TODO: Implement lodge building later
-    public void BuildLodge()
+
+    public bool BuildLodge()
     {
-        //Debug.Log("Build lodge");
+        // Only start if we *currently* can build
+        if (currentLodge == null || !isHoldingBranch)
+            return false;
+
+        // Capture the lodge we’re building on right now
+        BeaverLodge l = currentLodge.GetComponent<BeaverLodge>();
+        if (l == null) return false;
+
+        // Cancel if insufficient water level
+        World w = GameWorld.Instance().World();
+        if (w.FindHexWithLodge(l).WaterLevel() == 0) return false;
+
+        // Build the lodge
+        l.Build(GetHomeFarm());
+        isHoldingBranch = false;
+        return true;
     }
-} 
+
+    public bool BuildMound()
+    {
+        // Only start if we *currently* can build
+        if (currentMound == null || !isHoldingBranch)
+            return false;
+
+        // Capture the mound we’re building on right now
+        BeaverMound m = currentMound.GetComponent<BeaverMound>();
+        if (m == null) return false;
+
+        // Build the mound
+        m.Build(GetHomeFarm());
+        isHoldingBranch = false;
+        return true;
+    }
+
+    public bool BreakMound()
+    {
+        if (currentMound != null && !isHoldingBranch)
+        {
+            currentMound.GetComponent<BeaverMound>().Dismantle();
+            isHoldingBranch = true;
+            return true;
+        }
+        return false;
+    }
+}
