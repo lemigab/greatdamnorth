@@ -49,24 +49,12 @@ public class BeaverController : NetworkBehaviour
     public GameObject currentLodge = null;
     private GameObject branch;
 
-    private bool _isHoldingBranch = false;
-    public bool isHoldingBranch
-    {
-        get { return _isHoldingBranch; }
-        set
-        {
-            _isHoldingBranch = value;
-            if (branch != null)
-            {
-                //Debug.Log("Setting branch active: " + value);
-                if (value && branch.GetComponent<NetworkObject>().IsSpawned) {
-                    branch.GetComponent<NetworkObject>().Despawn();
-                } else if (!value && !branch.GetComponent<NetworkObject>().IsSpawned) {
-                    branch.GetComponent<NetworkObject>().Spawn();
-                }
-            }
-        }
-    }
+    // NetworkVariable to sync branch visibility across all clients
+    public NetworkVariable<bool> isHoldingBranch = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
 
 
     public SyrupFarm GetHomeFarm()
@@ -91,7 +79,36 @@ public class BeaverController : NetworkBehaviour
             gameObject.name = $"Beaver-{OwnerClientId}-{NetworkObjectId}";
         }
         
+        // Subscribe to NetworkVariable changes to update branch visibility
+        isHoldingBranch.OnValueChanged += OnBranchVisibilityChanged;
+        
+        // Set initial branch visibility based on current NetworkVariable value
+        if (branch != null)
+        {
+            branch.SetActive(false);
+        }
+
+        GameWorld.Instance().allBeavers.Add(this);
+        
         Debug.Log($"[BeaverController] OnNetworkSpawn - Name: {gameObject.name}, Position: {transform.position}, IsOwner: {IsOwner}, IsServer: {IsServer}, IsClient: {IsClient}, NetworkObjectId: {NetworkObjectId}, OwnerClientId: {OwnerClientId}");
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        // Unsubscribe from NetworkVariable changes
+        isHoldingBranch.OnValueChanged -= OnBranchVisibilityChanged;
+        GameWorld.Instance().allBeavers.Remove(this);
+        base.OnNetworkDespawn();
+    }
+
+    private void OnBranchVisibilityChanged(bool previousValue, bool newValue)
+    {
+        // Update branch visibility when NetworkVariable changes (syncs to all clients)
+        if (branch != null)
+        {
+            branch.SetActive(newValue);
+        }
+        Debug.Log($"[BeaverController] Branch visibility changed: {newValue} for {gameObject.name}");
     }
 
     public virtual void Start()
@@ -101,7 +118,11 @@ public class BeaverController : NetworkBehaviour
         //rb.useGravity = true;
 
         branch = transform.Find("Branch").gameObject;
-        isHoldingBranch = false;
+        if (branch != null)
+        {
+            // Set initial visibility (will be synced via NetworkVariable if networked)
+            branch.SetActive(false);
+        }
     }
 
     void OnTriggerEnter(Collider other)
@@ -192,8 +213,8 @@ public class BeaverController : NetworkBehaviour
     [Rpc(SendTo.Server)]
     public void ChewLogServerRpc()
     {
-        Debug.Log("BeaverController ChewLogServerRpc: isNearLog=" + isNearLog + ", isHoldingBranch=" + isHoldingBranch + ", currentLog=" + currentLog);
-        if (isNearLog && !isHoldingBranch && currentLog != null)
+        Debug.Log("BeaverController ChewLogServerRpc: isNearLog=" + isNearLog + ", isHoldingBranch=" + isHoldingBranch.Value + ", currentLog=" + currentLog);
+        if (isNearLog && !isHoldingBranch.Value && currentLog != null)
         {
             // Despawn the log so it disappears on all clients
             NetworkObject logNetObj = currentLog.GetComponent<NetworkObject>();
@@ -208,7 +229,7 @@ public class BeaverController : NetworkBehaviour
             {
                 Debug.LogWarning($"Cannot despawn log: logNetObj={logNetObj}, IsSpawned={logNetObj?.IsSpawned}");
             }
-            isHoldingBranch = true;
+            isHoldingBranch.Value = true;
             currentLog = null;
         }
     }
@@ -216,8 +237,8 @@ public class BeaverController : NetworkBehaviour
     // Keep this for backwards compatibility, but it now calls ServerRpc
     public bool ChewLog()
     {
-        Debug.Log("BeaverController ChewLog: isNearLog=" + isNearLog + ", isHoldingBranch=" + isHoldingBranch + ", currentLog=" + currentLog);
-        if (isNearLog && !isHoldingBranch && currentLog != null)
+        Debug.Log("BeaverController ChewLog: isNearLog=" + isNearLog + ", isHoldingBranch=" + isHoldingBranch.Value + ", currentLog=" + currentLog);
+        if (isNearLog && !isHoldingBranch.Value && currentLog != null)
         {
             Debug.Log("BeaverController ChewLog: calling ChewLogServerRpc");
             ChewLogServerRpc();
@@ -226,35 +247,71 @@ public class BeaverController : NetworkBehaviour
         return false;
     }
 
-    public bool BuildDam()
+    [Rpc(SendTo.Server)]
+    public void BuildDamServerRpc()
     {
-        // Only start if we *currently* can build
-        if (currentDam == null || !isHoldingBranch)
-            return false;
-
-        // Capture the dam we’re building on right now
         BeaverDam dam = currentDam.GetComponent<BeaverDam>();
         if (dam == null)
-            return false;
+            return;
 
         // Remove this part if you are putting the corountine back in
         dam.Increment();
         Vector3 offset = new(0f, dam.OffsetPerLevel() + 0.01f, 0f);
+        
+        // Safely get world and upstream hexes
+        if (GameWorld.Instance() == null)
+            return;
+            
         World w = GameWorld.Instance().World();
-        List<Hex> ups = w.UpstreamFrom(w.FindHexWithDam(dam), true);
-        foreach (BeaverController b in GameWorld.Instance().allBeavers)
+        if (w == null)
+            return;
+            
+        Hex damHex = w.FindHexWithDam(dam);
+        if (damHex == null)
+            return;
+            
+        List<Hex> ups = w.UpstreamFrom(damHex, true);
+        if (ups == null)
+            return;
+        
+        // Check if allBeavers is null or empty
+        if (GameWorld.Instance().allBeavers != null)
         {
-            foreach (Hex h in ups)
+            foreach (BeaverController b in GameWorld.Instance().allBeavers)
             {
-                Vector3 bPos = b.gameObject.transform.position;
-                if (h.landMesh.GetComponent<MeshRenderer>().bounds.Contains(bPos))
-                    b.gameObject.transform.position = bPos + offset;
+                // Skip null beavers or destroyed GameObjects
+                if (b == null || b.gameObject == null)
+                    continue;
+                    
+                foreach (Hex h in ups)
+                {
+                    if (h?.landMesh == null)
+                        continue;
+                        
+                    Vector3 bPos = b.gameObject.transform.position;
+                    MeshRenderer mr = h.landMesh.GetComponent<MeshRenderer>();
+                    if (mr != null && mr.bounds.Contains(bPos))
+                    {
+                        b.gameObject.transform.position = bPos + offset;
+                    }
+                }
             }
         }
 
-        isHoldingBranch = false;
+        isHoldingBranch.Value = false;
 
         // StartCoroutine(BuildDamSequence(dam));
+    }
+
+    public bool BuildDam()
+    {
+        // Only start if we *currently* can build
+        if (currentDam == null || !isHoldingBranch.Value)
+            return false;
+
+        // Capture the dam we’re building on right now
+        BuildDamServerRpc();
+
         return true;
     }
 
@@ -269,7 +326,7 @@ public class BeaverController : NetworkBehaviour
         bool isAI = false;
 
         // If this beaver is an AI (has NavMeshAgent), position it above the dam
-        if (dam != null && isHoldingBranch &&
+        if (dam != null && isHoldingBranch.Value &&
             TryGetComponent<NavMeshAgent>(out agent) && agent.enabled)
         {
             isAI = true;
@@ -309,7 +366,7 @@ public class BeaverController : NetworkBehaviour
             dam.Increment();
         }
 
-        isHoldingBranch = false;
+        isHoldingBranch.Value = false;
 
         // Smoothly drop AI back down to normal height
         if (isAI && agent != null)
@@ -339,11 +396,14 @@ public class BeaverController : NetworkBehaviour
     public bool BreakDam()
     {
 
-        if (currentDam != null && !isHoldingBranch)
+        if (currentDam != null && !isHoldingBranch.Value)
         {
             //Debug.Log("Break dam: " + currentDam.name);
             currentDam.GetComponent<BeaverDam>().Decrement();
-            isHoldingBranch = true;
+            if (IsServer)
+            {
+                isHoldingBranch.Value = true;
+            }
             return true;
         }
         return false;
@@ -353,7 +413,7 @@ public class BeaverController : NetworkBehaviour
     public bool BuildLodge()
     {
         // Only start if we *currently* can build
-        if (currentLodge == null || !isHoldingBranch)
+        if (currentLodge == null || !isHoldingBranch.Value)
             return false;
 
         // Capture the lodge we’re building on right now
@@ -366,14 +426,17 @@ public class BeaverController : NetworkBehaviour
 
         // Build the lodge
         l.Build(GetHomeFarm());
-        isHoldingBranch = false;
+        if (IsServer)
+        {
+            isHoldingBranch.Value = false;
+        }
         return true;
     }
 
     public bool BuildMound()
     {
         // Only start if we *currently* can build
-        if (currentMound == null || !isHoldingBranch)
+        if (currentMound == null || !isHoldingBranch.Value)
             return false;
 
         // Capture the mound we’re building on right now
@@ -382,16 +445,22 @@ public class BeaverController : NetworkBehaviour
 
         // Build the mound
         m.Build(GetHomeFarm());
-        isHoldingBranch = false;
+        if (IsServer)
+        {
+            isHoldingBranch.Value = false;
+        }
         return true;
     }
 
     public bool BreakMound()
     {
-        if (currentMound != null && !isHoldingBranch)
+        if (currentMound != null && !isHoldingBranch.Value)
         {
             currentMound.GetComponent<BeaverMound>().Dismantle();
-            isHoldingBranch = true;
+            if (IsServer)
+            {
+                isHoldingBranch.Value = true;
+            }
             return true;
         }
         return false;

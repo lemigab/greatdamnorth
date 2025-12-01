@@ -72,7 +72,7 @@ public class WorldBuilder : MonoBehaviour
         ConstructMap();
         
         // Wait a frame for all meshes and colliders to be fully set up before baking NavMesh
-        StartCoroutine(BakeNavMeshAndSpawnBeavers());
+        //StartCoroutine(BakeNavMeshAndSpawnBeavers());
     }
     
     private System.Collections.IEnumerator BakeNavMeshAndSpawnBeavers()
@@ -86,21 +86,6 @@ public class WorldBuilder : MonoBehaviour
             Debug.LogError("WorldBuilder: NavMeshSurface is not assigned! Cannot bake NavMesh.");
             yield break;
         }
-        
-        // Verify land hexes have colliders
-        int landHexesWithColliders = 0;
-        foreach (Transform child in transform)
-        {
-            if (child.name.StartsWith("Land-"))
-            {
-                MeshCollider mc = child.GetComponent<MeshCollider>();
-                if (mc != null && mc.sharedMesh != null)
-                {
-                    landHexesWithColliders++;
-                }
-            }
-        }
-        Debug.Log($"WorldBuilder: Found {landHexesWithColliders} land hexes with MeshColliders");
         
         Debug.Log("WorldBuilder: Baking NavMesh...");
         surface.BuildNavMesh();
