@@ -30,7 +30,7 @@ public class TradeLeaderboard : MonoBehaviour
 
     private void FixedUpdate()
     {
-        scoreText.text = ScoreSheet();
+        if (scoreText!=null) scoreText.text = ScoreSheet();
 
         if (!scoreCounterOn) return;
         if (frameCount++ % scoreCountInterval != 0) return;
@@ -73,7 +73,7 @@ public class TradeLeaderboard : MonoBehaviour
 
     public string ScoreSheet()
     {
-        string sheet = "Trade Leaderboard Scores";
+        string sheet = "Trade Leaderboard Scores\n";
         foreach (SyrupFarm f in scores.Keys)
             sheet += "\n" + f.name + " : " + scores[f];
         return sheet;
