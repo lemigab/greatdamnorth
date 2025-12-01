@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.LightTransport;
@@ -10,6 +11,7 @@ using WorldUtil;
 public class TradeLeaderboard : MonoBehaviour
 {
     public BoatSpawner boatSpawner;
+    public TextMeshProUGUI scoreText;
 
     private readonly Dictionary<Hex, SyrupFarm> tradeControl = new();
     private readonly Dictionary<SyrupFarm, int> scores = new();
@@ -28,6 +30,8 @@ public class TradeLeaderboard : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (scoreText!=null) scoreText.text = ScoreSheet();
+
         if (!scoreCounterOn) return;
         if (frameCount++ % scoreCountInterval != 0) return;
 
@@ -69,7 +73,7 @@ public class TradeLeaderboard : MonoBehaviour
 
     public string ScoreSheet()
     {
-        string sheet = "Trade Leaderboard Scores";
+        string sheet = "Trade Leaderboard Scores\n";
         foreach (SyrupFarm f in scores.Keys)
             sheet += "\n" + f.name + " : " + scores[f];
         return sheet;
