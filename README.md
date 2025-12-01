@@ -4,16 +4,6 @@
 
 This assignment expands on the generated world from A3 by allowing multiple players within a single game session, competing with each other for higher score. Additionally, the game itself and all essential play mechanics have been implemented.
 
-<<<<<<< HEAD
-### Execution Instructions
-- The unity scene to load to view the game scene is ???
-- Instructions for multiplayer loading?
-
-### Demo Video
-- [video link] (need to put here)
-
-### CISC 486 Group 18
-=======
 ### Multiplayer Testing Guide
 
 #### Initial Setup
@@ -41,7 +31,6 @@ The world will be constructed and beavers will spawn
 - [Video Link](https://drive.google.com/file/d/1ZDnWCCWZCOHQEjJAoA-CBs207-exMHxl/view?usp=sharing)
 
 ## CISC 486 Group 18
->>>>>>> origin/releases/a4
 - Owen Meima (21owm1)
 - Gabriel Lemieux (19gml2)
 - Charlie Kevill (21cmk11)
@@ -115,11 +104,7 @@ The core gameplay involves you playing as a beaver who wants to export his farme
 
 ## AI System
 
-<<<<<<< HEAD
-The AI System implemented in A3 has been preserved during the implementation of the multiplayer framework. A link to the README of that assignment, which described all FSM states/transitions and other AI components, may be accessed with the link below.
-=======
 The AI System implemented in A3 has been preserved during the implementation of the multiplayer framework. A link to the README of that assignment, which described all FSM states/transitions and other AI components, may be accessed with the link below. A singleplayer version of the game including AIs is located in SyrupFarmingScene in this branch.
->>>>>>> origin/releases/a4
 
 [View Assignment 3 README](PreviousAssignments/A3_README.md)
 
