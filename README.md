@@ -4,20 +4,14 @@
 
 This assignment expands on the generated world from A3 by allowing multiple players within a single game session, competing with each other for higher score. Additionally, the game itself and all essential play mechanics have been implemented.
 
-<br>
-
-## Execution Instructions
+### Execution Instructions
 - The unity scene to load to view the game scene is ???
 - Instructions for multiplayer loading?
 
-<br>
+### Demo Video
+- [video link] (need to put here)
 
-## Demo Video
-[video link] (need to put here)
-
-<br>
-
-## CISC 486 Group 18
+### CISC 486 Group 18
 - Owen Meima (21owm1)
 - Gabriel Lemieux (19gml2)
 - Charlie Kevill (21cmk11)
