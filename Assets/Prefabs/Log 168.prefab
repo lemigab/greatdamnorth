@@ -12,8 +12,7 @@ GameObject:
   - component: {fileID: 8749300658276492801}
   - component: {fileID: 7056859854941458066}
   - component: {fileID: 1501964836333156603}
-  - component: {fileID: -688494736526560625}
-  - component: {fileID: -4168246115651579334}
+  - component: {fileID: 8043830550041042412}
   m_Layer: 0
   m_Name: Log 168
   m_TagString: Tree
@@ -114,7 +113,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 3.208792, y: 10.678, z: 3.3183098}
   m_Center: {x: -0.0025821924, y: 5.339, z: 0.09542656}
---- !u!114 &-688494736526560625
+--- !u!114 &8043830550041042412
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -126,29 +125,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 2873684958
+  GlobalObjectIdHash: 0
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
   ActiveSceneSynchronization: 0
-  SceneMigrationSynchronization: 0
+  SceneMigrationSynchronization: 1
   SpawnWithObservers: 1
   DontDestroyWithOwner: 0
   AutoObjectParentSync: 1
   SyncOwnerTransformWhenParented: 1
   AllowOwnerToParent: 0
---- !u!114 &-4168246115651579334
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5672339850833545570}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f56301312b6bc4b429e91dc68b88695d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LogDespawnDebugger
-  ShowTopMostFoldoutHeaderGroup: 1

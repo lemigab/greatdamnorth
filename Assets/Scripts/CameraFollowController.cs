@@ -8,7 +8,7 @@ public class CameraFollowController : MonoBehaviour
     private float zoomSpeed= 2f;
     private float zoomLerpSpeed = 10.0f;
     private float zoomMin = 5.0f;
-    private float zoomMax = 15.0f;
+    private float zoomMax = 100.0f;
     private float currentZoom;
     private float targetZoom;
 

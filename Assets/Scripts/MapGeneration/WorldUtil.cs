@@ -255,19 +255,20 @@ namespace WorldUtil
         public readonly GameObject waterMesh;
         public readonly BeaverDam exitDam;
         public readonly BeaverLodge hexLodge;
-
+        public readonly GameObject[] logs;
 
         private int _waterLevel = 0;
 
         public Hex(Vector2Int mapPosition,
             GameObject landMesh, GameObject waterMesh,
-            BeaverDam exitDam, BeaverLodge hexLodge)
+            BeaverDam exitDam, BeaverLodge hexLodge, GameObject[] logs)
         {
             this.mapPosition = mapPosition;
             this.landMesh = landMesh;
             this.waterMesh = waterMesh;
             this.exitDam = exitDam;
             this.hexLodge = hexLodge;
+            this.logs = logs;
         }
 
         public bool HasDam() => exitDam != null;

@@ -59,7 +59,11 @@ public class BeaverController : NetworkBehaviour
             if (branch != null)
             {
                 //Debug.Log("Setting branch active: " + value);
-                branch.SetActive(value);
+                if (value && branch.GetComponent<NetworkObject>().IsSpawned) {
+                    branch.GetComponent<NetworkObject>().Despawn();
+                } else if (!value && !branch.GetComponent<NetworkObject>().IsSpawned) {
+                    branch.GetComponent<NetworkObject>().Spawn();
+                }
             }
         }
     }
@@ -195,10 +199,14 @@ public class BeaverController : NetworkBehaviour
             NetworkObject logNetObj = currentLog.GetComponent<NetworkObject>();
             if (logNetObj != null && logNetObj.IsSpawned)
             {
-                logNetObj.Despawn(true);
-                //currentLog.SetActive(false);
+                Debug.Log($"Despawning log: {logNetObj.name}, NetworkObjectId: {logNetObj.NetworkObjectId}");
+                logNetObj.Despawn(true); // Destroy the GameObject immediately
                 
                 Debug.Log($"Log {logNetObj.name} despawned. IsSpawned after despawn: {logNetObj.IsSpawned}");
+            }
+            else
+            {
+                Debug.LogWarning($"Cannot despawn log: logNetObj={logNetObj}, IsSpawned={logNetObj?.IsSpawned}");
             }
             isHoldingBranch = true;
             currentLog = null;

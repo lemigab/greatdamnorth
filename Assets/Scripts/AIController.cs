@@ -637,13 +637,11 @@ public class AIController : BeaverController
             Transform land = hex.landMesh.transform;
 
             // look for child objects whose name starts with "Log"
-            foreach (Transform child in land)
+            
+            foreach (GameObject log in hex.logs)
             {
-                if (child.name.StartsWith("Log", System.StringComparison.OrdinalIgnoreCase))
-                {
-                    myRiverTrees.Add(child.gameObject);
-                    break; // one tree per tile, so we can stop after first match
-                }
+                myRiverTrees.Add(log);
+
             }
         }
 
