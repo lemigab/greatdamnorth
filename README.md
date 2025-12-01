@@ -1,5 +1,6 @@
 # Great Dam North - Assignment 4 (Networking)
 
+![alt text](greatdamnorth.png)
 
 This assignment expands on the generated world from A3 by allowing multiple players within a single game session, competing with each other for higher score. Additionally, the game itself and all essential play mechanics have been implemented.
 
@@ -12,6 +13,16 @@ This assignment expands on the generated world from A3 by allowing multiple play
 ## Demo Video
 [video link] (need to put here)
 
+
+## CISC 486 Group 18
+- Owen Meima (21owm1)
+- Gabriel Lemieux (19gml2)
+- Charlie Kevill (21cmk11)
+
+
+<br><br>
+
+![alt text](gpguide.png)
 
 ## World Map Generation
 
@@ -90,9 +101,3 @@ The AI System implemented in A3 has been preserved during the implementation of 
 
 - **Mouse** - Pan camera around the scene
 - **Mouse Scroll** - Zoom in/out
-
-
-## CISC 486 Group 18
-- Owen Meima (21owm1)
-- Gabriel Lemieux (19gml2)
-- Charlie Kevill (21cmk11)
