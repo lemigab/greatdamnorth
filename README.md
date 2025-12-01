@@ -1,20 +1,18 @@
-# Great Dam North - Assignment 3
+# Great Dam North - Assignment 4 (Networking)
 
 ## Controls
 
 ### Player Controls
 
 - **WASD** - Move beaver (movement is relative to camera orientation)
-- **C** - Chew tree or break dam
-- **E** - Build dam (requires holding a log/branch)
+- **C** - Chew tree, dam, or mound
+- **E** - Build dam, mound, or lodge (requires holding a log/branch)
 - **Space** - When near a dam to jump over it
 
 ### Camera Controls
 
 - **Mouse** - Pan camera around the scene
 - **Mouse Scroll** - Zoom in/out
-- **1** - Switch to player camera view
-- **2** - Switch to next AI camera in list
 
 ## AI System
 
