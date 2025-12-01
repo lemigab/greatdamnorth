@@ -1,12 +1,89 @@
 # Great Dam North - Assignment 4 (Networking)
 
+
+This assignment expands on the generated world from A3 by allowing multiple players within a single game session, competing with each other for higher score. Additionally, the game itself and all essential play mechanics have been implemented.
+
+
+## Execution Instructions
+- The unity scene to load to view the game scene is ???
+- Instructions for multiplayer loading?
+
+
+## Demo Video
+[video link] (need to put here)
+
+
+## World Map Generation
+
+### Procedural Hexagonal World
+
+- World is procedurally generated using a base hexagonal tile template
+- Map is divided into six regions with their own river system
+- The river system connects the tiles in a region together
+- Each region connects to others via a number of roads
+- A syrup farm spawns at starting point of each river system
+- Beavers spawn in their own syrup farm at game start
+
+## Gameplay Mechanics
+
+The core gameplay involves you playing as a beaver who wants to export his farmed maple syrup to as much of the forest as possible. You have the ability to build a variety of structures to help you in this task. Below is a detailed list of all core mechanisms which exist in the core gameplay.
+
+### Chewable Trees
+
+- Beavers chew (brown) trees to collect branches.
+- Beavers must be holding a branch to build structures.
+
+### Beaver Dam
+
+- Beavers can build dams using branches on any river section between two tiles.
+- Beavers can obtain branches by dismantling a dam.
+- Dams raise the water level of the upstream river, flooding tiles.
+
+### Beaver Mound
+
+- Beavers can build mounds using branches on any road between two tiles.
+- Beavers can obtain branches by dismantling a mound.
+- The beaver who built a specific mound will 'own' in until it is dismantled.
+
+### Beaver Lodge
+
+- Beavers can build lodges using branches in any tile that is at least partially flooded.
+- Lodges will be automatically dismantled with no refund, if their tile stops being flooded.
+- The beaver who built a specific lodge will 'own' in until it is dismantled.
+
+### Syrup Farm
+
+- Each beaver spawns at a home maple syrup farm which they 'own'.
+- Syrup farms will push syrup exports along roads and rivers towards lodges of the same owner.
+
+### Trade Route
+
+- Maple syrup exports from a farm will travel along trade routes, those being the **shortest** possible path towards each lodge of the same owner beaver.
+- Exports may travel along rivers in the direct of current (outward from that river's syrup farm), or along roads in either direction.
+- Exports from a farm may only travel along roads which have a mound of the same owner. That is, if Beaver #1 has built a mound on a certain road, then only they may push exports along it. If no mounds exist on a road, no beavers may push exports along it.
+- These travel paths may **not** include opponent lodges. That is, an opponent lodge will block a beaver's trade route until it is dismantled.
+- No trade route may be a complete subset of another trade route. If a line of lodges 
+
+### Trade Scoring
+
+- Every several seconds, each beaver will gain 1 point for each tile along at least one of their own trade routes. For example, if Beaver #1 has 3 trades routes collectively covering 5 tiles, and Beaver #2 has one trade route collectively covering 6 tiles, then each beaver will gain 5 and 6 points, respectively.
+- Trade scoring may only increment. Trade scoring does not end at any time and the player(s) may choose when to consider a round over/won.
+
+
+## AI System
+
+The AI System implemented in A3 has been preserved during the implementation of the multiplayer framework. A link to the README of that assignment, which described all FSM states/transitions and other AI components, may be accessed with the link below.
+
+[View Assignment 2 README](PreviousAssignments/A3_README.md)
+
+
 ## Controls
 
 ### Player Controls
 
 - **WASD** - Move beaver (movement is relative to camera orientation)
 - **C** - Chew tree, dam, or mound
-- **E** - Build dam, mound, or lodge (requires holding a log/branch)
+- **E** - Build dam, mound, or lodge (requires holding a branch)
 - **Space** - When near a dam to jump over it
 
 ### Camera Controls
@@ -14,61 +91,8 @@
 - **Mouse** - Pan camera around the scene
 - **Mouse Scroll** - Zoom in/out
 
-## AI System
-
-### Finite State Machine
-
-[View Assignment 2 README](PreviousAssignments/A2_README.md)
-
-#### AI Decision Logic
-
-- AI prioritizes chewing trees for branches when available
-- When no trees are available break enemy dams in other territories to get branches
-- AI will only build dams in its territory and break dams in enemy territory
-- Cannot chew trees or break dams while holding a log (must build dam first)
-- Cannot build dam without holding a log
-
-### Pathfinding System
-
-- **Unity NavMesh System** - AI uses Unity's NavMeshAgent for efficient pathfinding
-- **Path Distance Calculation** - AI calculates shortest path distance rather than straight-line distance when finding nearest targets
-- **Water Prioritization** - AI prioritizes water routes since beavers move twice as fast in water (8 units/sec vs 4 units/sec on land)
-- **Dynamic Obstacle Avoidance** - All beavers use NavMeshObstacle components that dynamically carve the NavMesh, ensuring AI beavers automatically avoid each other and the player
-
-## World Generation
-
-### Procedural Hexagonal World
-
-- World is procedurally generated using a base hexagonal tile template
-- Map is divided into six areas with their own river system
-- The river system connects the tiles in an area together
-- Each area connects to others via roads between tiles
-- Beavers spawn in designated areas at game start
-
-## Gameplay Mechanics
-
-### Dam System
-
-- Beavers can build dams using logs/branches collected from trees
-- Dams can be built in own territory to flood tiles
-- Dams can be broken in enemy territory to get logs and unflood tiles
-- Dam levels affect water height in upstream tiles
-
-### Log System
-
-- Beavers chew trees to collect logs/branches
-- Must hold a log/branch to build dams
-- Breaking dams also provides logs/branches
-
-## Demo Video
-[video link](https://drive.google.com/file/d/1o6mNmgn2bmx546VvHUm0vr15Ux4kvOn-/view?usp=sharing)
-
-## Scene Instructions
-- The unity scene to load to view the game scene is PathfindingDemoScene
-- MapPainter contains the generated world all the outside object are the templates to generate from
 
 ## CISC 486 Group 18
-
 - Owen Meima (21owm1)
 - Gabriel Lemieux (19gml2)
 - Charlie Kevill (21cmk11)
