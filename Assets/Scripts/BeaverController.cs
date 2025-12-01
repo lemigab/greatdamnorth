@@ -393,17 +393,23 @@ public class BeaverController : NetworkBehaviour
         }
     }
 
+    [Rpc(SendTo.Server)]
+    public void BreakDamServerRpc()
+    {
+        BeaverDam dam = currentDam.GetComponent<BeaverDam>();
+        if (dam == null)
+            return;
+        dam.Decrement();
+        isHoldingBranch.Value = true;
+    }
+
     public bool BreakDam()
     {
 
         if (currentDam != null && !isHoldingBranch.Value)
         {
             //Debug.Log("Break dam: " + currentDam.name);
-            currentDam.GetComponent<BeaverDam>().Decrement();
-            if (IsServer)
-            {
-                isHoldingBranch.Value = true;
-            }
+            BreakDamServerRpc();
             return true;
         }
         return false;

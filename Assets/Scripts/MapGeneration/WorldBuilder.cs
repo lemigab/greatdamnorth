@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
@@ -167,10 +168,12 @@ public class WorldBuilder : MonoBehaviour
                 HexSide dS = G.DownstreamSideOf(truePos, mapSize, construct);
                 HexSide[] r = G.RoadSidesOf(truePos, construct);
                 bool f = G.IsRiverSource(truePos, construct);
-                Mesh lM = originMeshBuilder.GenerateWithFeatures(f, uS, dS, r).Item1;
+                var meshTuple = originMeshBuilder.GenerateWithFeatures(f, uS, dS, r);
+                Mesh lM = meshTuple.Item1;
+                Mesh wM = meshTuple.Item2; // Water mesh is generated but wasn't being used
                 // copy the reference hex
                 GameObject newLandHex = Instantiate(originLandHex, transform);
-                GameObject newWaterHex = Instantiate(originWaterHex, transform);
+                GameObject newWaterHex = null;
                 
                 // Assign the generated mesh to the MeshFilter and MeshCollider
                 MeshFilter landMeshFilter = newLandHex.GetComponent<MeshFilter>();
@@ -194,33 +197,45 @@ public class WorldBuilder : MonoBehaviour
                     rowOrg.y + (j * hexOff.y) + (hexW * 2f)
                 );
                 newLandHex.transform.position = new(pos.x, 0f, pos.y);
-                newWaterHex.transform.position = new(pos.x, -waterHeight, pos.y);
+                Vector3 waterPos = new(pos.x, -waterHeight, pos.y);
                 
-                // Spawn water hex as NetworkObject if networking is active (only on server)
-                // Note: Both server and clients create water hexes (needed for Hex class),
-                // but only server spawns them as NetworkObjects for synchronization
-                if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
+                if (NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer)
                 {
+                    newWaterHex = Instantiate(originWaterHex, transform);
+                    newWaterHex.transform.position = waterPos;
+                    newWaterHex.name = "Water-" + truePos.x + "-" + truePos.y;
+                    
+                    MeshFilter waterMeshFilter = newWaterHex.GetComponent<MeshFilter>();
+                    MeshCollider waterMeshCollider = newWaterHex.GetComponent<MeshCollider>();
+                    if (waterMeshFilter != null)
+                    {
+                        waterMeshFilter.mesh = wM;
+                    }
+                    if (waterMeshCollider != null)
+                    {
+                        waterMeshCollider.sharedMesh = wM;
+                    }
+                    
+                    ForceWaterCollider(newWaterHex);
+                    
                     NetworkObject waterNetObj = newWaterHex.GetComponent<NetworkObject>();
                     if (waterNetObj == null)
                     {
-                        // Add NetworkObject at runtime if prefab doesn't have one
                         waterNetObj = newWaterHex.AddComponent<NetworkObject>();
                     }
                     waterNetObj.Spawn();
                 }
-                // build logs after tile is positioned (so we can calculate world coordinates)
-                // Only generate logs on server - clients will receive them via NetworkObjects
+                else
+                {
+                    newWaterHex = null;
+                }
+                
                 GameObject[] logs = null;
                 if (!mount && (NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer))
                 {
                     logs = BuildTileLogs(newLandHex, originLogs, lM, originMeshBuilder.seed, tPY, f, new Vector3(pos.x, 0f, pos.y));
                 }
                 newLandHex.name = "Land-" + truePos.x + "-" + truePos.y;
-                newWaterHex.name = "Water-" + truePos.x + "-" + truePos.y;
-                // force down collision box of water tile
-                ForceWaterCollider(newWaterHex);
-                // build dam if downstream exists
                 BeaverDam bd = null;
                 if (dS != HexSide.NULL && (NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer))
                 {
@@ -235,7 +250,6 @@ public class WorldBuilder : MonoBehaviour
                         = Quaternion.Euler(0f, G.AngleToAlign(dS), 0f);
                     newDam.name = "Dam-" + truePos.x + "-" + truePos.y;
                     
-                    // Spawn as NetworkObject if networking is active
                     NetworkObject damNetObj = newDam.GetComponent<NetworkObject>();
                     if (damNetObj != null && NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
                     {
@@ -243,14 +257,12 @@ public class WorldBuilder : MonoBehaviour
                     }
                     else if (damNetObj == null && NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
                     {
-                        // Add NetworkObject at runtime if prefab doesn't have one
                         damNetObj = newDam.AddComponent<NetworkObject>();
                         damNetObj.Spawn();
                     }
                     
                     bd = newDam.GetComponent<BeaverDam>();
                 }
-                // build lodge if river exists and outside farm
                 BeaverLodge bl = null;
                 if (!mount && !G.IsRiverSource(truePos, construct))
                 {
@@ -263,16 +275,13 @@ public class WorldBuilder : MonoBehaviour
                     newLodge.GetComponent<MeshRenderer>().enabled = showBuildsOnStart;
                     bl = newLodge.GetComponent<BeaverLodge>();
                 }
-                // Create and store hex object
                 Hex hex = new(truePos, newLandHex, newWaterHex, bd, bl, logs);
                 hexes.Add(truePos, hex);
             }
             rowOrg.x += (i < mapSize / 2) ? -hexOff.x : 0;
             rowOrg.y += (i < mapSize / 2) ? hexOff.y : 2f * hexOff.y;
         }
-        // reset the seed
         originMeshBuilder.seed = originalSeed;
-        // build game world
         List<Hex> allHexes = new();
         List<List<Hex>> wRivers = new();
         List<Tuple<Hex, Hex>> wRoads = new();
@@ -282,7 +291,6 @@ public class WorldBuilder : MonoBehaviour
         foreach (Hex hex in hexes.Values) allHexes.Add(hex);
         foreach (Vector2Int[] river in C.RiverSets(construct))
         {
-            // add a farm at river origin
             List<Hex> hs = new();
             for (int i = 0; i < river.Length; i++)
             {
@@ -297,31 +305,155 @@ public class WorldBuilder : MonoBehaviour
         {
             Vector2Int r0 = road[0];
             Vector2Int r1 = road[1];
-            // Add road
             Tuple<Hex, Hex> hs = new(hexes[r0], hexes[r1]);
             wRoads.Add(hs);
-            // Add mound
             HexSide sideBtw = G.EdgeFrom(r0, r1);
-            Vector3 r0Pos = hexes[r0].waterMesh
-                .GetComponent<MeshRenderer>().bounds.center;
-            Vector3 r1Pos = hexes[r1].waterMesh
-                .GetComponent<MeshRenderer>().bounds.center;
-            Vector3 rp = (r0Pos + r1Pos) * 0.5f;
-            GameObject newMound = Instantiate(originMound.gameObject, transform);
-            newMound.transform.position = new(rp.x, 0f, rp.z);
-            newMound.transform.localRotation
-                = Quaternion.Euler(0f, G.AngleToAlign(sideBtw), 0f);
-            newMound.name = "Mound-"
-                + r0.x + "-" + r0.y + "-" + r1.x + "-" + r1.y;
-            newMound.GetComponent<MeshRenderer>().enabled = showBuildsOnStart;
-            BeaverMound bm = newMound.GetComponent<BeaverMound>();
-            wMoundLocs.Add(new(hs, bm));
+            
+            if (hexes[r0].waterMesh != null && hexes[r1].waterMesh != null)
+            {
+                Vector3 r0Pos = hexes[r0].waterMesh
+                    .GetComponent<MeshRenderer>().bounds.center;
+                Vector3 r1Pos = hexes[r1].waterMesh
+                    .GetComponent<MeshRenderer>().bounds.center;
+                Vector3 rp = (r0Pos + r1Pos) * 0.5f;
+                GameObject newMound = Instantiate(originMound.gameObject, transform);
+                newMound.transform.position = new(rp.x, 0f, rp.z);
+                newMound.transform.localRotation
+                    = Quaternion.Euler(0f, G.AngleToAlign(sideBtw), 0f);
+                newMound.name = "Mound-"
+                    + r0.x + "-" + r0.y + "-" + r1.x + "-" + r1.y;
+                newMound.GetComponent<MeshRenderer>().enabled = showBuildsOnStart;
+                BeaverMound bm = newMound.GetComponent<BeaverMound>();
+                wMoundLocs.Add(new(hs, bm));
+            }
+            else
+            {
+                Debug.LogWarning($"Cannot create mound: waterMesh is null for hexes at {r0} or {r1}");
+            }
         }
         GameWorld.Instance().SetWaterHeight(waterHeight);
         GameWorld.Instance().AddWorld(
             new(allHexes, wRivers, wRoads, wMoundLocs, wFarms));
+        
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsClient && !NetworkManager.Singleton.IsServer)
+        {
+            StartCoroutine(MatchWaterNetworkObjectsToHexes(allHexes));
+        }
+        
         Debug.Log("Made a world with " + wRivers.Count + " rivers and "
             + wRoads.Count + " roads");
+    }
+    
+    private System.Collections.IEnumerator MatchWaterNetworkObjectsToHexes(List<Hex> allHexes)
+    {
+        yield return new WaitForSeconds(0.5f);
+        
+        if (NetworkManager.Singleton == null || NetworkManager.Singleton.SpawnManager == null)
+            yield break;
+        
+        Debug.Log($"[WorldBuilder] Matching NetworkObject water hexes to Hex objects...");
+        int matchedCount = 0;
+        
+        foreach (Hex hex in allHexes)
+        {
+            if (hex.waterMesh != null)
+                continue;
+            
+            Vector3 expectedWaterPos = new Vector3(
+                hex.landMesh.transform.position.x,
+                -waterHeight,
+                hex.landMesh.transform.position.z
+            );
+            
+            GameObject bestMatch = null;
+            float bestDistance = float.MaxValue;
+            
+            foreach (var spawnedObj in NetworkManager.Singleton.SpawnManager.SpawnedObjectsList)
+            {
+                if (spawnedObj.gameObject.name.StartsWith("Water"))
+                {
+                    MeshRenderer mr = spawnedObj.gameObject.GetComponent<MeshRenderer>();
+                    if (mr != null)
+                    {
+                        float distance = Vector3.Distance(spawnedObj.gameObject.transform.position, expectedWaterPos);
+                        if (distance < 1.0f && distance < bestDistance)
+                        {
+                            bestDistance = distance;
+                            bestMatch = spawnedObj.gameObject;
+                        }
+                    }
+                }
+            }
+            
+            if (bestMatch != null)
+            {
+                hex.waterMesh = bestMatch;
+                
+                Vector2Int mapPos = hex.mapPosition;
+                HexSide uS = G.UpstreamSideOf(mapPos, mapSize, construct);
+                HexSide dS = G.DownstreamSideOf(mapPos, mapSize, construct);
+                HexSide[] r = G.RoadSidesOf(mapPos, construct);
+                bool f = G.IsRiverSource(mapPos, construct);
+                
+                var meshTuple = originMeshBuilder.GenerateWithFeatures(f, uS, dS, r);
+                Mesh wM = meshTuple.Item2;
+                
+                MeshFilter waterMeshFilter = bestMatch.GetComponent<MeshFilter>();
+                MeshCollider waterMeshCollider = bestMatch.GetComponent<MeshCollider>();
+                
+                if (waterMeshFilter != null)
+                {
+                    waterMeshFilter.mesh = wM;
+                    Debug.Log($"[WorldBuilder] Assigned mesh to MeshFilter for {bestMatch.name}");
+                }
+                else
+                {
+                    Debug.LogWarning($"[WorldBuilder] MeshFilter not found on {bestMatch.name}");
+                }
+                
+                if (waterMeshCollider != null)
+                {
+                    waterMeshCollider.sharedMesh = wM;
+                }
+                
+                MeshRenderer mr = bestMatch.GetComponent<MeshRenderer>();
+                if (mr != null)
+                {
+                    mr.enabled = true;
+                    
+                    MeshRenderer originMR = originWaterHex.GetComponent<MeshRenderer>();
+                    if (originMR != null && originMR.sharedMaterial != null)
+                    {
+                        mr.sharedMaterial = originMR.sharedMaterial;
+                        Debug.Log($"[WorldBuilder] Assigned material {originMR.sharedMaterial.name} to {bestMatch.name}");
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[WorldBuilder] Could not get material from origin prefab for {bestMatch.name}");
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning($"[WorldBuilder] MeshRenderer not found on {bestMatch.name}");
+                }
+                
+                ForceWaterCollider(bestMatch);
+                
+                if (waterMeshFilter != null && waterMeshFilter.sharedMesh == null)
+                {
+                    Debug.LogError($"[WorldBuilder] WARNING: Mesh not assigned to {bestMatch.name} after assignment!");
+                }
+                
+                matchedCount++;
+                Debug.Log($"[WorldBuilder] Matched and configured water NetworkObject {bestMatch.name} to hex at {hex.mapPosition} (distance: {bestDistance:F3})");
+            }
+            else
+            {
+                Debug.LogWarning($"[WorldBuilder] Could not find NetworkObject water hex for hex at {hex.mapPosition}");
+            }
+        }
+        
+        Debug.Log($"[WorldBuilder] Matched {matchedCount} water NetworkObjects to hexes");
     }
     
     private void SpawnAIBeavers()
@@ -338,7 +470,6 @@ public class WorldBuilder : MonoBehaviour
             return;
         }
         
-        // Spawn AI beavers at hardcoded positions
         for (int i = 0; i < aiBeaverSpawnPositions.Length; i++)
         {
             Vector3 spawnPos = aiBeaverSpawnPositions[i];
@@ -425,9 +556,6 @@ public class WorldBuilder : MonoBehaviour
             // Add to list of created logs
             createdLogs.Add(log);
             
-            // Spawn as NetworkObject if networking is active (only on server)
-            // Note: If prefabs have GlobalObjectIdHash = 0, remove them from NetworkManager's spawnable list
-            // and ensure they have NetworkObject components. Clients will receive them via spawn messages.
             if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
             {
                 NetworkObject logNetObj = log.GetComponent<NetworkObject>();

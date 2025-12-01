@@ -252,8 +252,8 @@ namespace WorldUtil
     {
         public readonly Vector2Int mapPosition;
         public readonly GameObject landMesh;
-        public readonly GameObject waterMesh;
-        public readonly BeaverDam exitDam;
+        public GameObject waterMesh; // Made mutable so clients can set NetworkObject version
+        public BeaverDam exitDam;
         public readonly BeaverLodge hexLodge;
         public readonly GameObject[] logs;
 
