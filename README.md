@@ -7,6 +7,7 @@ This assignment expands on the generated world from A3 by allowing multiple play
 ### Multiplayer Testing Guide
 
 #### Initial Setup
+0. Open MultiPlayerScene before completing the below steps.
 1. Open Multiplayer Tools: Click Window → Multiplayer → Multiplayer Play Mode. This opens the Multiplayer Play Mode window
 
 2. Configure Virtual Players: In the Multiplayer Play Mode window, you can set up virtual Unity GUIs to test multiplayer. Check the checkbox for each player you want (e.g., check 2 boxes for 2 players). Press Yes if prompted to build
@@ -29,10 +30,6 @@ The world will be constructed and beavers will spawn
 
 ## Demo Video
 - [Video Link](https://drive.google.com/file/d/1ZDnWCCWZCOHQEjJAoA-CBs207-exMHxl/view?usp=sharing)
-
-## Scene Instructions
-- The unity scene to load to view the game scene is PathfindingDemoScene
-- MapPainter contains the generated world all the outside object are the templates to generate from
 
 ## CISC 486 Group 18
 - Owen Meima (21owm1)
