@@ -416,19 +416,15 @@ public class BeaverController : NetworkBehaviour
     }
 
 
-    public bool BuildLodge()
+    [Rpc(SendTo.Server)]
+    public void BuildLodgeServerRpc()
     {
-        // Only start if we *currently* can build
-        if (currentLodge == null || !isHoldingBranch.Value)
-            return false;
-
-        // Capture the lodge we’re building on right now
         BeaverLodge l = currentLodge.GetComponent<BeaverLodge>();
-        if (l == null) return false;
+        if (l == null) return;
 
         // Cancel if insufficient water level
         World w = GameWorld.Instance().World();
-        if (w.FindHexWithLodge(l).WaterLevel() == 0) return false;
+        if (w.FindHexWithLodge(l).WaterLevel() == 0) return;
 
         // Build the lodge
         l.Build(GetHomeFarm());
@@ -436,6 +432,16 @@ public class BeaverController : NetworkBehaviour
         {
             isHoldingBranch.Value = false;
         }
+    }
+
+
+    public bool BuildLodge()
+    {
+        // Only start if we *currently* can build
+        if (currentLodge == null || !isHoldingBranch.Value)
+            return false;
+
+        BuildLodgeServerRpc();
         return true;
     }
 

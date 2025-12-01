@@ -3,6 +3,7 @@ using NUnit.Framework;
 using Unity.VisualScripting;
 using UnityEngine;
 using WorldUtil;
+using Unity.Netcode;
 
 public class BoatSpawner : MonoBehaviour
 {
@@ -24,6 +25,7 @@ public class BoatSpawner : MonoBehaviour
     {
         if (!spawnerOn) return;
         if (frameCount++ % spawnInterval != 0) return;
+        if (NetworkManager.Singleton != null && !NetworkManager.Singleton.IsServer) return;
 
         // Safety assurance
         if (GameWorld.Instance() == null) return;
@@ -46,6 +48,17 @@ public class BoatSpawner : MonoBehaviour
                 GameObject boat = Instantiate(originBoat.gameObject, transform);
                 boat.transform.position = spawnPoint + spawnOffset;
                 boat.name = "Boat";
+                
+                if (NetworkManager.Singleton != null)
+                {
+                    NetworkObject boatNetObj = boat.GetComponent<NetworkObject>();
+                    if (boatNetObj == null)
+                    {
+                        boatNetObj = boat.AddComponent<NetworkObject>();
+                    }
+                    boatNetObj.Spawn();
+                }
+                
                 boat.GetComponent<PreviewBoat>().SetRoute(path);
             }
         }

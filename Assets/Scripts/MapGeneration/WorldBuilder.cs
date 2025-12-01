@@ -264,7 +264,7 @@ public class WorldBuilder : MonoBehaviour
                     bd = newDam.GetComponent<BeaverDam>();
                 }
                 BeaverLodge bl = null;
-                if (!mount && !G.IsRiverSource(truePos, construct))
+                if (!mount && !G.IsRiverSource(truePos, construct) && (NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer))
                 {
                     GameObject newLodge = Instantiate(
                         originLodge.gameObject, transform);
@@ -273,6 +273,18 @@ public class WorldBuilder : MonoBehaviour
                         pos.x + cntr.x, -waterHeight, pos.y + cntr.y);
                     newLodge.name = "Lodge-" + truePos.x + "-" + truePos.y;
                     newLodge.GetComponent<MeshRenderer>().enabled = showBuildsOnStart;
+                    
+                    NetworkObject lodgeNetObj = newLodge.GetComponent<NetworkObject>();
+                    if (lodgeNetObj != null && NetworkManager.Singleton != null)
+                    {
+                        lodgeNetObj.Spawn();
+                    }
+                    else if (lodgeNetObj == null && NetworkManager.Singleton != null)
+                    {
+                        lodgeNetObj = newLodge.AddComponent<NetworkObject>();
+                        lodgeNetObj.Spawn();
+                    }
+                    
                     bl = newLodge.GetComponent<BeaverLodge>();
                 }
                 Hex hex = new(truePos, newLandHex, newWaterHex, bd, bl, logs);
@@ -338,6 +350,7 @@ public class WorldBuilder : MonoBehaviour
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsClient && !NetworkManager.Singleton.IsServer)
         {
             StartCoroutine(MatchWaterNetworkObjectsToHexes(allHexes));
+            StartCoroutine(MatchLodgeNetworkObjectsToHexes(allHexes));
         }
         
         Debug.Log("Made a world with " + wRivers.Count + " rivers and "
@@ -454,6 +467,56 @@ public class WorldBuilder : MonoBehaviour
         }
         
         Debug.Log($"[WorldBuilder] Matched {matchedCount} water NetworkObjects to hexes");
+    }
+    
+    private System.Collections.IEnumerator MatchLodgeNetworkObjectsToHexes(List<Hex> allHexes)
+    {
+        yield return new WaitForSeconds(0.5f);
+        
+        if (NetworkManager.Singleton == null || NetworkManager.Singleton.SpawnManager == null)
+            yield break;
+        
+        int matchedCount = 0;
+        
+        foreach (Hex hex in allHexes)
+        {
+            if (hex.hexLodge != null)
+                continue;
+            
+            Vector3 expectedLodgePos = new Vector3(
+                hex.landMesh.transform.position.x,
+                -waterHeight,
+                hex.landMesh.transform.position.z
+            );
+            
+            BeaverLodge bestMatch = null;
+            float bestDistance = float.MaxValue;
+            
+            foreach (var spawnedObj in NetworkManager.Singleton.SpawnManager.SpawnedObjectsList)
+            {
+                if (spawnedObj.gameObject.name.StartsWith("Lodge"))
+                {
+                    BeaverLodge lodge = spawnedObj.gameObject.GetComponent<BeaverLodge>();
+                    if (lodge != null)
+                    {
+                        float distance = Vector3.Distance(spawnedObj.gameObject.transform.position, expectedLodgePos);
+                        if (distance < 1.0f && distance < bestDistance)
+                        {
+                            bestDistance = distance;
+                            bestMatch = lodge;
+                        }
+                    }
+                }
+            }
+            
+            if (bestMatch != null)
+            {
+                hex.hexLodge = bestMatch;
+                matchedCount++;
+            }
+        }
+        
+        Debug.Log($"[WorldBuilder] Matched {matchedCount} lodge NetworkObjects to hexes");
     }
     
     private void SpawnAIBeavers()
