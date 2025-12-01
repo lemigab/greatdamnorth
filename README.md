@@ -4,15 +4,18 @@
 
 This assignment expands on the generated world from A3 by allowing multiple players within a single game session, competing with each other for higher score. Additionally, the game itself and all essential play mechanics have been implemented.
 
+<br>
 
 ## Execution Instructions
 - The unity scene to load to view the game scene is ???
 - Instructions for multiplayer loading?
 
+<br>
 
 ## Demo Video
 [video link] (need to put here)
 
+<br>
 
 ## CISC 486 Group 18
 - Owen Meima (21owm1)
@@ -24,6 +27,8 @@ This assignment expands on the generated world from A3 by allowing multiple play
 
 ![alt text](gpguide.png)
 
+<br>
+
 ## World Map Generation
 
 #### Procedural Hexagonal World
@@ -34,6 +39,8 @@ This assignment expands on the generated world from A3 by allowing multiple play
 - Each region connects to others via a number of roads
 - A syrup farm spawns at starting point of each river system
 - Beavers spawn in their own syrup farm at game start
+
+<br>
 
 ## Gameplay Mechanics
 
@@ -80,6 +87,7 @@ The core gameplay involves you playing as a beaver who wants to export his farme
 - Every several seconds, each beaver will gain 1 point for each tile along at least one of their own trade routes. For example, if Beaver #1 has 3 trades routes collectively covering 5 tiles, and Beaver #2 has one trade route collectively covering 6 tiles, then each beaver will gain 5 and 6 points, respectively.
 - Trade scoring may only increment. Trade scoring does not end at any time and the player(s) may choose when to consider a round over/won.
 
+<br>
 
 ## AI System
 
@@ -87,6 +95,7 @@ The AI System implemented in A3 has been preserved during the implementation of 
 
 [View Assignment 3 README](PreviousAssignments/A3_README.md)
 
+<br>
 
 ## Controls
 
