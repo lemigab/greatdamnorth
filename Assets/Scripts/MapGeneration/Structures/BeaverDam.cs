@@ -53,9 +53,66 @@ public class BeaverDam : MonoBehaviour
         {
             if (h.exitDam.Level() > _lvl) break;
             h.SetWaterLevel(_lvl);
-            Vector3 v = h.waterMesh.transform.position;
-            h.waterMesh.transform.position =
-                new(v.x, -dL + _lvl * OffsetPerLevel(), v.z);
+            
+            // Calculate the new position
+            Vector3 basePos = h.waterMesh.transform.position;
+            Vector3 newPos = new(basePos.x, -dL + _lvl * OffsetPerLevel(), basePos.z);
+            
+            // ALWAYS update the local water hex first (this is what's stored in Hex class)
+            // On clients, this might be what's actually visible
+            h.waterMesh.transform.position = newPos;
+            
+            // Also find and update the NetworkObject version if it exists
+            // On server, the local one IS the NetworkObject. On clients, they're separate.
+            string waterName = h.waterMesh.name;
+            GameObject networkWaterHex = null;
+            
+            if (Unity.Netcode.NetworkManager.Singleton != null)
+            {
+                // Search through all spawned NetworkObjects
+                foreach (var spawnedObj in Unity.Netcode.NetworkManager.Singleton.SpawnManager.SpawnedObjectsList)
+                {
+                    if (spawnedObj.gameObject.name == waterName)
+                    {
+                        // Verify it's a water hex by checking for MeshRenderer
+                        MeshRenderer checkMR = spawnedObj.gameObject.GetComponent<MeshRenderer>();
+                        if (checkMR != null)
+                        {
+                            networkWaterHex = spawnedObj.gameObject;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Update the local water hex (stored in Hex class) - this is what's visible on both server and clients
+            h.waterMesh.transform.position = newPos;
+            
+            // Also update NetworkObject version if it exists and is different
+            if (networkWaterHex != null && networkWaterHex != h.waterMesh)
+            {
+                networkWaterHex.transform.position = newPos;
+            }
+            
+            // Force visual refresh on the local water hex (primary one)
+            MeshRenderer mr = h.waterMesh.GetComponent<MeshRenderer>();
+            if (mr != null)
+            {
+                // Force renderer refresh
+                bool wasEnabled = mr.enabled;
+                mr.enabled = false;
+                mr.enabled = wasEnabled;
+            }
+            
+            // Force mesh bounds update
+            MeshFilter mf = h.waterMesh.GetComponent<MeshFilter>();
+            if (mf != null && mf.sharedMesh != null)
+            {
+                Mesh mesh = mf.sharedMesh;
+                mesh.RecalculateBounds();
+                mf.sharedMesh = null;
+                mf.sharedMesh = mesh;
+            }
         }
     }
 

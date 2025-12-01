@@ -10,6 +10,7 @@ using Random = System.Random;
 using Unity.VisualScripting;
 using static UnityEditor.PlayerSettings;
 using Unity.VisualScripting.Antlr3.Runtime.Tree;
+using Unity.Netcode;
 
 public class WorldBuilder : MonoBehaviour
 {
@@ -23,6 +24,18 @@ public class WorldBuilder : MonoBehaviour
     public GameObject originFarmBucket;
     public GameObject treeContainer;
     public GameObject logContainer;
+
+    public GameObject[] logPrefabAssets;
+    
+    [Header("AI Beaver Spawning")]
+    public GameObject aiBeaverPrefab;
+    public Vector3[] aiBeaverSpawnPositions = new Vector3[]
+    {
+        new Vector3(-64.9f, 1.433f, 133.3f),
+        new Vector3(-65.7f, 1.433f, 217.9f),
+        new Vector3(83f, 1.433f, 133.9f),
+        new Vector3(82.4f, 1.433f, 218.8f)
+    };
 
     public NavMeshSurface surface;
 
@@ -38,10 +51,93 @@ public class WorldBuilder : MonoBehaviour
 
     private void Start()
     {
-        ConstructMap();
+        // If networking is active, wait for connection before constructing map
+        // Otherwise, construct immediately
+        if (NetworkManager.Singleton != null)
+        {
+            // Server constructs when server starts
+            NetworkManager.Singleton.OnServerStarted += OnServerStarted;
+            // Clients construct when they connect
+            NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+        }
+        else
+        {
+            ConstructMap();
+        }
         //surface.BuildNavMesh(); // turned off for now
-
     }
+
+    private void OnServerStarted()
+    {
+        ConstructMap();
+        
+        // Wait a frame for all meshes and colliders to be fully set up before baking NavMesh
+        StartCoroutine(BakeNavMeshAndSpawnBeavers());
+    }
+    
+    private System.Collections.IEnumerator BakeNavMeshAndSpawnBeavers()
+    {
+        // Wait for end of frame to ensure all geometry is ready
+        yield return new WaitForEndOfFrame();
+        
+        // Check if surface is assigned
+        if (surface == null)
+        {
+            Debug.LogError("WorldBuilder: NavMeshSurface is not assigned! Cannot bake NavMesh.");
+            yield break;
+        }
+        
+        // Verify land hexes have colliders
+        int landHexesWithColliders = 0;
+        foreach (Transform child in transform)
+        {
+            if (child.name.StartsWith("Land-"))
+            {
+                MeshCollider mc = child.GetComponent<MeshCollider>();
+                if (mc != null && mc.sharedMesh != null)
+                {
+                    landHexesWithColliders++;
+                }
+            }
+        }
+        Debug.Log($"WorldBuilder: Found {landHexesWithColliders} land hexes with MeshColliders");
+        
+        Debug.Log("WorldBuilder: Baking NavMesh...");
+        surface.BuildNavMesh();
+        Debug.Log("WorldBuilder: NavMesh baking complete.");
+        
+        // Spawn AI beavers after NavMesh is baked (only on server)
+        if (aiBeaverPrefab != null && aiBeaverSpawnPositions != null && aiBeaverSpawnPositions.Length > 0)
+        {
+            for (int i = 0; i < aiBeaverSpawnPositions.Length; i++)
+            {
+                Vector3 spawnPos = aiBeaverSpawnPositions[i];
+                GameObject aiBeaver = Instantiate(aiBeaverPrefab, spawnPos, Quaternion.identity);
+                aiBeaver.name = "BeaverAI-" + i;
+                Debug.Log($"Spawned AI beaver {i} at position: {spawnPos}");
+            }
+        }
+    }
+
+    private void OnClientConnected(ulong clientId)
+    {
+        // Only construct on the client itself (not when other clients connect)
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsClient && !NetworkManager.Singleton.IsServer)
+        {
+            ConstructMap();
+            //surface.BuildNavMesh();
+        }
+    }
+
+    private void OnDestroy()
+    {
+        // Unsubscribe from events to prevent memory leaks
+        if (NetworkManager.Singleton != null)
+        {
+            NetworkManager.Singleton.OnServerStarted -= OnServerStarted;
+            NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
+        }
+    } 
 
 
     [ContextMenu("Construct Map")]
@@ -61,10 +157,8 @@ public class WorldBuilder : MonoBehaviour
         for (int i = 0; i < tcc; i++)
             originTrees[i] = treeContainer.transform.GetChild(i).gameObject;
         // Get log options
-        int lcc = logContainer.transform.childCount;
-        GameObject[] originLogs = new GameObject[lcc];
-        for (int i = 0; i < lcc; i++)
-            originLogs[i] = logContainer.transform.GetChild(i).gameObject;
+
+        GameObject[] originLogs = logPrefabAssets;
         // Get hex mesh geometry
         Random rng = new(originMeshBuilder.seed);
         int originalSeed = originMeshBuilder.seed;
@@ -92,6 +186,19 @@ public class WorldBuilder : MonoBehaviour
                 // copy the reference hex
                 GameObject newLandHex = Instantiate(originLandHex, transform);
                 GameObject newWaterHex = Instantiate(originWaterHex, transform);
+                
+                // Assign the generated mesh to the MeshFilter and MeshCollider
+                MeshFilter landMeshFilter = newLandHex.GetComponent<MeshFilter>();
+                MeshCollider landMeshCollider = newLandHex.GetComponent<MeshCollider>();
+                if (landMeshFilter != null)
+                {
+                    landMeshFilter.mesh = lM;
+                }
+                if (landMeshCollider != null)
+                {
+                    landMeshCollider.sharedMesh = lM;
+                }
+                
                 // place trees on copy
                 bool mount = uS == HexSide.NULL && dS == HexSide.NULL;
                 if (!mount) BuildTileTrees(newLandHex, originTrees, originLogs,
@@ -103,13 +210,34 @@ public class WorldBuilder : MonoBehaviour
                 );
                 newLandHex.transform.position = new(pos.x, 0f, pos.y);
                 newWaterHex.transform.position = new(pos.x, -waterHeight, pos.y);
+                
+                // Spawn water hex as NetworkObject if networking is active (only on server)
+                // Note: Both server and clients create water hexes (needed for Hex class),
+                // but only server spawns them as NetworkObjects for synchronization
+                if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
+                {
+                    NetworkObject waterNetObj = newWaterHex.GetComponent<NetworkObject>();
+                    if (waterNetObj == null)
+                    {
+                        // Add NetworkObject at runtime if prefab doesn't have one
+                        waterNetObj = newWaterHex.AddComponent<NetworkObject>();
+                    }
+                    waterNetObj.Spawn();
+                }
+                // build logs after tile is positioned (so we can calculate world coordinates)
+                // Only generate logs on server - clients will receive them via NetworkObjects
+                GameObject[] logs = null;
+                if (!mount && (NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer))
+                {
+                    logs = BuildTileLogs(newLandHex, originLogs, lM, originMeshBuilder.seed, tPY, f, new Vector3(pos.x, 0f, pos.y));
+                }
                 newLandHex.name = "Land-" + truePos.x + "-" + truePos.y;
                 newWaterHex.name = "Water-" + truePos.x + "-" + truePos.y;
                 // force down collision box of water tile
                 ForceWaterCollider(newWaterHex);
                 // build dam if downstream exists
                 BeaverDam bd = null;
-                if (dS != HexSide.NULL)
+                if (dS != HexSide.NULL && (NetworkManager.Singleton == null || NetworkManager.Singleton.IsServer))
                 {
                     GameObject newDam = Instantiate(
                         originDam.gameObject, transform);
@@ -121,6 +249,20 @@ public class WorldBuilder : MonoBehaviour
                     newDam.transform.localRotation
                         = Quaternion.Euler(0f, G.AngleToAlign(dS), 0f);
                     newDam.name = "Dam-" + truePos.x + "-" + truePos.y;
+                    
+                    // Spawn as NetworkObject if networking is active
+                    NetworkObject damNetObj = newDam.GetComponent<NetworkObject>();
+                    if (damNetObj != null && NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
+                    {
+                        damNetObj.Spawn();
+                    }
+                    else if (damNetObj == null && NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
+                    {
+                        // Add NetworkObject at runtime if prefab doesn't have one
+                        damNetObj = newDam.AddComponent<NetworkObject>();
+                        damNetObj.Spawn();
+                    }
+                    
                     bd = newDam.GetComponent<BeaverDam>();
                 }
                 // build lodge if river exists and outside farm
@@ -137,7 +279,7 @@ public class WorldBuilder : MonoBehaviour
                     bl = newLodge.GetComponent<BeaverLodge>();
                 }
                 // Create and store hex object
-                Hex hex = new(truePos, newLandHex, newWaterHex, bd, bl);
+                Hex hex = new(truePos, newLandHex, newWaterHex, bd, bl, logs);
                 hexes.Add(truePos, hex);
             }
             rowOrg.x += (i < mapSize / 2) ? -hexOff.x : 0;
@@ -196,6 +338,32 @@ public class WorldBuilder : MonoBehaviour
         Debug.Log("Made a world with " + wRivers.Count + " rivers and "
             + wRoads.Count + " roads");
     }
+    
+    private void SpawnAIBeavers()
+    {
+        if (aiBeaverPrefab == null)
+        {
+            Debug.LogWarning("WorldBuilder: AI Beaver prefab not assigned, skipping AI beaver spawn.");
+            return;
+        }
+        
+        if (aiBeaverSpawnPositions == null || aiBeaverSpawnPositions.Length == 0)
+        {
+            Debug.LogWarning("WorldBuilder: No AI beaver spawn positions defined.");
+            return;
+        }
+        
+        // Spawn AI beavers at hardcoded positions
+        for (int i = 0; i < aiBeaverSpawnPositions.Length; i++)
+        {
+            Vector3 spawnPos = aiBeaverSpawnPositions[i];
+            
+            GameObject aiBeaver = Instantiate(aiBeaverPrefab, spawnPos, Quaternion.identity);
+            aiBeaver.name = "AIBeaver-" + i;
+            
+            Debug.Log($"Spawned AI beaver {i} at position: {spawnPos}");
+        }
+    }
 
 
     [ContextMenu("Clear")]
@@ -231,6 +399,64 @@ public class WorldBuilder : MonoBehaviour
     }
 
 
+    private GameObject[] BuildTileLogs(
+        GameObject tile, GameObject[] logs,
+        Mesh landMesh, int randSeed, float buildHeight, bool isFarm, Vector3 tileWorldPos)
+    {
+        Random rng = new(randSeed);
+        // Get list of placed trees for reference (needed for log naming)
+        List<Vector3> placedTrees = new();
+        foreach (Vector3 v in landMesh.vertices)
+        {
+            if (v.y != 0) continue;
+            Vector3 placeAt = new(v.x, buildHeight, v.z);
+            if (placedTrees.Contains(placeAt)) continue;
+            placedTrees.Add(placeAt);
+        }
+        
+        // List to collect created log GameObjects
+        List<GameObject> createdLogs = new List<GameObject>();
+        
+        // internal logs
+        List<Vector3> shufLocations = new(landMesh.vertices);
+        Shuffle(shufLocations, rng);
+        int logCnt = 0;
+        int maxLogs = isFarm ? 0 : forestSize;
+        foreach (Vector3 v in shufLocations)
+        {
+            float lowest = -(originMeshBuilder.hillHeight - waterHeight);
+            if (v.y < lowest || v.y > lowest / 4f) continue;
+            if (logCnt++ >= maxLogs) break;
+            // Calculate position in local space relative to tile
+            Vector3 localPos = new(v.x, v.y + buildHeight, v.z);
+            // Convert to world space by adding tile's world position
+            Vector3 worldPos = tileWorldPos + localPos;
+            
+            GameObject logPrefab = logs[rng.Next(logs.Length)];
+            GameObject log = Instantiate(logPrefab, null);
+            log.transform.position = worldPos;
+            log.name = "Log" + placedTrees.Count;
+            
+            // Add to list of created logs
+            createdLogs.Add(log);
+            
+            // Spawn as NetworkObject if networking is active (only on server)
+            // Note: If prefabs have GlobalObjectIdHash = 0, remove them from NetworkManager's spawnable list
+            // and ensure they have NetworkObject components. Clients will receive them via spawn messages.
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
+            {
+                NetworkObject logNetObj = log.GetComponent<NetworkObject>();
+                if (logNetObj == null)
+                {
+                    // Add NetworkObject at runtime if prefab doesn't have one
+                    logNetObj = log.AddComponent<NetworkObject>();
+                }
+                logNetObj.Spawn();
+            }
+        }
+        return createdLogs.ToArray();
+    }
+
     private void BuildTileTrees(
         GameObject tile, GameObject[] trees, GameObject[] logs,
         Mesh landMesh, int randSeed, float buildHeight, bool isFarm)
@@ -249,25 +475,11 @@ public class WorldBuilder : MonoBehaviour
             tree.name = "Tree" + placedTrees.Count;
             placedTrees.Add(placeAt);
         }
-        // internal logs
-        List<Vector3> shufLocations = new(landMesh.vertices);
-        Shuffle(shufLocations, rng);
-        int logCnt = 0;
-        int maxLogs = isFarm ? 0 : forestSize;
-        foreach (Vector3 v in shufLocations)
-        {
-            float lowest = -(originMeshBuilder.hillHeight - waterHeight);
-            if (v.y < lowest || v.y > lowest / 4f) continue;
-            if (logCnt++ >= maxLogs) break;
-            Vector3 placeAt = new(v.x, v.y + buildHeight, v.z);
-            GameObject log = Instantiate(
-               logs[rng.Next(logs.Length)], tile.transform);
-            log.transform.position = placeAt;
-            log.name = "Log" + placedTrees.Count;
-        }
         if (isFarm)
         {
             // place buckets around internal border trees
+            List<Vector3> shufLocations = new(landMesh.vertices);
+            Shuffle(shufLocations, rng);
             List<Vector2> placedBuckets = new();
             int bCnt = 0;
             int bMax = 24;

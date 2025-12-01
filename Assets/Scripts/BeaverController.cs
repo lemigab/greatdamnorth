@@ -4,8 +4,9 @@ using System.Collections;
 using WorldUtil;
 using NUnit.Framework;
 using System.Collections.Generic;
+using Unity.Netcode;
 
-public class BeaverController : MonoBehaviour
+public class BeaverController : NetworkBehaviour
 {
     public int syrupFarmId;
 
@@ -58,7 +59,11 @@ public class BeaverController : MonoBehaviour
             if (branch != null)
             {
                 //Debug.Log("Setting branch active: " + value);
-                branch.SetActive(value);
+                if (value && branch.GetComponent<NetworkObject>().IsSpawned) {
+                    branch.GetComponent<NetworkObject>().Despawn();
+                } else if (!value && !branch.GetComponent<NetworkObject>().IsSpawned) {
+                    branch.GetComponent<NetworkObject>().Spawn();
+                }
             }
         }
     }
@@ -72,12 +77,28 @@ public class BeaverController : MonoBehaviour
         return w.syrupFarms[syrupFarmId];
     }
 
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+        
+        // Give beaver a unique name based on client ID and ownership
+        if (IsOwner)
+        {
+            gameObject.name = $"PlayerBeaver-{OwnerClientId}";
+        }
+        else
+        {
+            gameObject.name = $"Beaver-{OwnerClientId}-{NetworkObjectId}";
+        }
+        
+        Debug.Log($"[BeaverController] OnNetworkSpawn - Name: {gameObject.name}, Position: {transform.position}, IsOwner: {IsOwner}, IsServer: {IsServer}, IsClient: {IsClient}, NetworkObjectId: {NetworkObjectId}, OwnerClientId: {OwnerClientId}");
+    }
 
     public virtual void Start()
     {
         rb = GetComponent<Rigidbody>();
-        rb.isKinematic = false;
-        rb.useGravity = true;
+        //rb.isKinematic = false;
+        //rb.useGravity = true;
 
         branch = transform.Find("Branch").gameObject;
         isHoldingBranch = false;
@@ -161,19 +182,45 @@ public class BeaverController : MonoBehaviour
     public virtual void Move(Vector3 targetDirection)
     {
         Vector3 moveDirection = targetDirection * moveSpeed;
-        rb.MovePosition(transform.position + moveDirection * Time.deltaTime);
+        // Use fixedDeltaTime since Move() is called from FixedUpdate context
+        rb.MovePosition(transform.position + moveDirection * Time.fixedDeltaTime);
 
         var rotation = Quaternion.LookRotation(targetDirection);
-        rb.MoveRotation(Quaternion.Lerp(transform.rotation, rotation, rotationSpeed * Time.deltaTime));
+        rb.MoveRotation(Quaternion.Lerp(transform.rotation, rotation, rotationSpeed * Time.fixedDeltaTime));
     }
 
-    public bool ChewLog()
+    [Rpc(SendTo.Server)]
+    public void ChewLogServerRpc()
     {
+        Debug.Log("BeaverController ChewLogServerRpc: isNearLog=" + isNearLog + ", isHoldingBranch=" + isHoldingBranch + ", currentLog=" + currentLog);
         if (isNearLog && !isHoldingBranch && currentLog != null)
         {
-            currentLog.SetActive(false);
+            // Despawn the log so it disappears on all clients
+            NetworkObject logNetObj = currentLog.GetComponent<NetworkObject>();
+            if (logNetObj != null && logNetObj.IsSpawned)
+            {
+                Debug.Log($"Despawning log: {logNetObj.name}, NetworkObjectId: {logNetObj.NetworkObjectId}");
+                logNetObj.Despawn(true); // Destroy the GameObject immediately
+                
+                Debug.Log($"Log {logNetObj.name} despawned. IsSpawned after despawn: {logNetObj.IsSpawned}");
+            }
+            else
+            {
+                Debug.LogWarning($"Cannot despawn log: logNetObj={logNetObj}, IsSpawned={logNetObj?.IsSpawned}");
+            }
             isHoldingBranch = true;
             currentLog = null;
+        }
+    }
+
+    // Keep this for backwards compatibility, but it now calls ServerRpc
+    public bool ChewLog()
+    {
+        Debug.Log("BeaverController ChewLog: isNearLog=" + isNearLog + ", isHoldingBranch=" + isHoldingBranch + ", currentLog=" + currentLog);
+        if (isNearLog && !isHoldingBranch && currentLog != null)
+        {
+            Debug.Log("BeaverController ChewLog: calling ChewLogServerRpc");
+            ChewLogServerRpc();
             return true;
         }
         return false;

@@ -4,6 +4,7 @@
 
 This assignment expands on the generated world from A3 by allowing multiple players within a single game session, competing with each other for higher score. Additionally, the game itself and all essential play mechanics have been implemented.
 
+<<<<<<< HEAD
 ### Execution Instructions
 - The unity scene to load to view the game scene is ???
 - Instructions for multiplayer loading?
@@ -12,6 +13,35 @@ This assignment expands on the generated world from A3 by allowing multiple play
 - [video link] (need to put here)
 
 ### CISC 486 Group 18
+=======
+### Multiplayer Testing Guide
+
+#### Initial Setup
+1. Open Multiplayer Tools: Click Window → Multiplayer → Multiplayer Play Mode. This opens the Multiplayer Play Mode window
+
+2. Configure Virtual Players: In the Multiplayer Play Mode window, you can set up virtual Unity GUIs to test multiplayer. Check the checkbox for each player you want (e.g., check 2 boxes for 2 players). Press Yes if prompted to build
+
+3. Wait for Setup: Wait for the GUI to load and initialize
+
+#### Starting the Host
+4. Start Main Unity GUI: Press Play on the main Unity GUI (the original Game window)
+
+5. Start Host Server: In the Hierarchy, find DontDestroyOnLoad → NetworkManager.
+Select the NetworkManager GameObject. In the Inspector, click "Start Host" button
+The world will be constructed and beavers will spawn
+
+#### Connecting a Client
+6. Open Virtual Unity GUI: In the virtual Unity GUI window, click Layout dropdown. Check Hierarchy and Inspector to view them.
+
+7. Connect Client: In the Hierarchy, find NetworkManager. Select the NetworkManager GameObject In the Inspector, click "Start Client" button. You should now be connected to the host server
+
+8. Verification: Both windows should show the same world. Both players should see each other's beavers. Test log chewing, dam building, and other multiplayer features
+
+## Demo Video
+- [Video Link](https://drive.google.com/file/d/1ZDnWCCWZCOHQEjJAoA-CBs207-exMHxl/view?usp=sharing)
+
+## CISC 486 Group 18
+>>>>>>> origin/releases/a4
 - Owen Meima (21owm1)
 - Gabriel Lemieux (19gml2)
 - Charlie Kevill (21cmk11)
@@ -85,7 +115,11 @@ The core gameplay involves you playing as a beaver who wants to export his farme
 
 ## AI System
 
+<<<<<<< HEAD
 The AI System implemented in A3 has been preserved during the implementation of the multiplayer framework. A link to the README of that assignment, which described all FSM states/transitions and other AI components, may be accessed with the link below.
+=======
+The AI System implemented in A3 has been preserved during the implementation of the multiplayer framework. A link to the README of that assignment, which described all FSM states/transitions and other AI components, may be accessed with the link below. A singleplayer version of the game including AIs is located in SyrupFarmingScene in this branch.
+>>>>>>> origin/releases/a4
 
 [View Assignment 3 README](PreviousAssignments/A3_README.md)
 
