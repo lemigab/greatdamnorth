@@ -1,12 +1,13 @@
 using Unity.VisualScripting;
 using UnityEngine;
 using WorldUtil;
+using System.Collections.Generic;
 
 public class GameWorld : MonoBehaviour
 {
     public TradeLeaderboard leaderboard;
     public BeaverController lordsChosenBeaver;
-    public BeaverController[] allBeavers;
+    public List<BeaverController> allBeavers = new List<BeaverController>();
 
     private static GameWorld _instance;
 
