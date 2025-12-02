@@ -252,9 +252,9 @@ namespace WorldUtil
     {
         public readonly Vector2Int mapPosition;
         public readonly GameObject landMesh;
-        public readonly GameObject waterMesh;
-        public readonly BeaverDam exitDam;
-        public readonly BeaverLodge hexLodge;
+        public GameObject waterMesh;
+        public BeaverDam exitDam;
+        public BeaverLodge hexLodge;
         public readonly GameObject[] logs;
 
         private int _waterLevel = 0;

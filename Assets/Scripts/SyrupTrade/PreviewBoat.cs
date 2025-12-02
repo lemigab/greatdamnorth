@@ -4,8 +4,9 @@ using NUnit.Framework;
 using Unity.VisualScripting;
 using UnityEngine;
 using WorldUtil;
+using Unity.Netcode;
 
-public class PreviewBoat : MonoBehaviour
+public class PreviewBoat : NetworkBehaviour
 {
     public float movementSpeed = 1.0f;
 
@@ -32,12 +33,28 @@ public class PreviewBoat : MonoBehaviour
     public void FixedUpdate()
     {
         if (!travelToTarget) return;
+        if (NetworkManager.Singleton != null && !IsServer) return;
+        
         Vector3 pos = gameObject.transform.position;
         float dist = Vector3.Distance(pos, currentTargetPos);
         if (dist < targetBuffer)
         {
-            if (routeProg == routeMax) DestroyImmediate(gameObject);
-            else { routeProg++; UpdateTargetPos(); }
+            if (routeProg == routeMax)
+            {
+                if (NetworkManager.Singleton != null)
+                {
+                    GetComponent<NetworkObject>().Despawn();
+                }
+                else
+                {
+                    DestroyImmediate(gameObject);
+                }
+            }
+            else
+            {
+                routeProg++;
+                UpdateTargetPos();
+            }
         }
         else
         {
