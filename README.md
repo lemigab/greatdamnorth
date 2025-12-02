@@ -93,7 +93,7 @@ The core gameplay involves you playing as a beaver who wants to export his farme
 - Exports may travel along rivers in the direct of current (outward from that river's syrup farm), or along roads in either direction.
 - Exports from a farm may only travel along roads which have a mound of the same owner. That is, if Beaver #1 has built a mound on a certain road, then only they may push exports along it. If no mounds exist on a road, no beavers may push exports along it.
 - These travel paths may **not** include opponent lodges. That is, an opponent lodge will block a beaver's trade route until it is dismantled.
-- No trade route may be a complete subset of another trade route. If a line of lodges 
+- No trade route may be a complete subset of another trade route.
 
 #### Trade Scoring
 
